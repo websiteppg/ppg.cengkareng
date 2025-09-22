@@ -138,9 +138,12 @@ export default function ParticipantManagement() {
     if (editingParticipant && editForm.nama && editForm.email && editForm.jabatan && editForm.instansi && editForm.role) {
       const success = await updateParticipant(editingParticipant.id, editForm)
       if (success) {
+        // Reset semua state terlebih dahulu
         setEditingParticipant(null)
         setEditForm({ nama: '', email: '', jabatan: '', instansi: '', role: '', password: '' })
-        await fetchParticipants() // Refresh data untuk menampilkan semua peserta
+        setSearchTerm('') // Reset pencarian untuk menampilkan semua peserta
+        // Refresh data
+        await fetchParticipants()
       }
     }
   }
@@ -148,6 +151,7 @@ export default function ParticipantManagement() {
   const handleCancelEdit = () => {
     setEditingParticipant(null)
     setEditForm({ nama: '', email: '', jabatan: '', instansi: '', role: '', password: '' })
+    setSearchTerm('') // Reset pencarian untuk menampilkan semua peserta
   }
 
   const updateParticipant = async (id: string, data: any) => {
