@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Users, CheckCircle, XCircle, Clock, FileText, Heart } from 'lucide-react'
+import { ArrowLeft, Users, CheckCircle, XCircle, Clock, FileText, Heart, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 
 interface Peserta {
@@ -37,6 +37,7 @@ interface Sesi {
 const getStatusIcon = (status: string) => {
   switch (status) {
     case 'hadir': return <CheckCircle className="w-4 h-4" />
+    case 'terlambat': return <Clock className="w-4 h-4" />
     case 'ghoib': return <XCircle className="w-4 h-4" />
     case 'izin': return <FileText className="w-4 h-4" />
     case 'sakit': return <Heart className="w-4 h-4" />
@@ -47,6 +48,7 @@ const getStatusIcon = (status: string) => {
 const getStatusColor = (status: string) => {
   switch (status) {
     case 'hadir': return 'bg-green-100 text-green-800'
+    case 'terlambat': return 'bg-orange-100 text-orange-800'
     case 'ghoib': return 'bg-red-100 text-red-800'
     case 'izin': return 'bg-yellow-100 text-yellow-800'
     case 'sakit': return 'bg-blue-100 text-blue-800'
@@ -57,6 +59,7 @@ const getStatusColor = (status: string) => {
 const getStatusText = (status: string) => {
   switch (status) {
     case 'hadir': return 'Hadir'
+    case 'terlambat': return 'Terlambat'
     case 'ghoib': return 'Ghoib'
     case 'izin': return 'Izin'
     case 'sakit': return 'Sakit'
@@ -72,15 +75,48 @@ export default function KehadiranPage() {
   const [absensi, setAbsensi] = useState<Absensi[]>([])
   const [allPeserta, setAllPeserta] = useState<Peserta[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   useEffect(() => {
     if (sesiId) {
       fetchData()
+      
+      // Auto refresh setiap 30 detik
+      const interval = setInterval(() => {
+        fetchData()
+      }, 30000)
+      
+      return () => clearInterval(interval)
     }
   }, [sesiId])
 
-  const fetchData = async () => {
+  const handleAutoAssign = async () => {
     try {
+      setIsRefreshing(true)
+      const response = await fetch(`/api/sesi/${sesiId}/auto-assign`, {
+        method: 'POST'
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        alert(result.message)
+        fetchData()
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Gagal auto-assign peserta')
+      }
+    } catch (error) {
+      alert('Terjadi kesalahan sistem')
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
+
+  const fetchData = async (isManualRefresh = false) => {
+    try {
+      if (isManualRefresh) {
+        setIsRefreshing(true)
+      }
       // Fetch sesi info
       const sesiResponse = await fetch(`/api/sesi/${sesiId}`)
       if (sesiResponse.ok) {
@@ -96,28 +132,43 @@ export default function KehadiranPage() {
         setAbsensi(kehadiranData)
       }
 
-      // Fetch peserta terdaftar
+      // Langsung ambil dari data absensi yang sudah ada peserta info
+      const pesertaFromAbsensi = kehadiranData?.map((a: any) => a.peserta).filter(Boolean) || []
+      
+      // Fetch peserta terdaftar sebagai backup
       const pesertaResponse = await fetch(`/api/sesi/${sesiId}/peserta`)
       let pesertaTerdaftar = []
       if (pesertaResponse.ok) {
         pesertaTerdaftar = await pesertaResponse.json()
       }
 
-      // Gabungkan dengan peserta yang sudah absen tapi tidak terdaftar
-      const pesertaAbsen = kehadiranData?.map((a: any) => a.peserta).filter(Boolean) || []
+      // Gabungkan semua peserta
       const allPesertaMap = new Map()
       
-      // Tambahkan peserta terdaftar
-      pesertaTerdaftar.forEach((p: any) => allPesertaMap.set(p.id, p))
+      // Prioritaskan peserta dari absensi (data lebih lengkap)
+      pesertaFromAbsensi.forEach((p: any) => {
+        if (p && p.id) {
+          allPesertaMap.set(p.id, p)
+        }
+      })
       
-      // Tambahkan peserta yang sudah absen
-      pesertaAbsen.forEach((p: any) => allPesertaMap.set(p.id, p))
+      // Tambahkan peserta terdaftar yang belum ada
+      pesertaTerdaftar.forEach((p: any) => {
+        if (p && p.id && !allPesertaMap.has(p.id)) {
+          allPesertaMap.set(p.id, p)
+        }
+      })
       
-      setAllPeserta(Array.from(allPesertaMap.values()))
+      const finalPesertaList = Array.from(allPesertaMap.values())
+      console.log('Absensi peserta:', pesertaFromAbsensi.length)
+      console.log('Terdaftar peserta:', pesertaTerdaftar.length) 
+      console.log('Final peserta list:', finalPesertaList)
+      setAllPeserta(finalPesertaList)
     } catch (error) {
       console.error('Error fetching data:', error)
     } finally {
       setIsLoading(false)
+      setIsRefreshing(false)
     }
   }
 
@@ -141,7 +192,8 @@ export default function KehadiranPage() {
     hadir: absensi.filter(a => a.status_kehadiran === 'hadir').length,
     ghoib: allPeserta.length - absensi.length,
     izin: absensi.filter(a => a.status_kehadiran === 'izin').length,
-    sakit: absensi.filter(a => a.status_kehadiran === 'sakit').length
+    sakit: absensi.filter(a => a.status_kehadiran === 'sakit').length,
+    terlambat: absensi.filter(a => a.status_kehadiran === 'terlambat').length
   }
 
   if (isLoading) {
@@ -158,18 +210,40 @@ export default function KehadiranPage() {
   return (
     <div className="p-6">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <Link href="/admin/sesi">
-          <Button variant="outline" size="sm">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Kembali
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-4">
+          <Link href="/admin/sesi">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Kembali
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Kehadiran Peserta</h1>
+            <p className="text-gray-600 mt-1">
+              {sesi?.nama_sesi} - {sesi && new Date(sesi.tanggal).toLocaleDateString('id-ID')}
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Button 
+            onClick={handleAutoAssign} 
+            disabled={isRefreshing}
+            variant="default"
+            size="sm"
+          >
+            <Users className="w-4 h-4 mr-2" />
+            Auto-Assign Peserta
           </Button>
-        </Link>
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Kehadiran Peserta</h1>
-          <p className="text-gray-600 mt-1">
-            {sesi?.nama_sesi} - {sesi && new Date(sesi.tanggal).toLocaleDateString('id-ID')}
-          </p>
+          <Button 
+            onClick={() => fetchData(true)} 
+            disabled={isRefreshing}
+            variant="outline"
+            size="sm"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Memuat...' : 'Refresh'}
+          </Button>
         </div>
       </div>
 

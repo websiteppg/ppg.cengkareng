@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { exportToExcel, exportToPDF } from '@/lib/export'
 import RoleGuard from '@/components/admin/role-guard'
+import SessionSelectionModal from '@/components/admin/session-selection-modal'
 
 export default function LaporanManagement() {
   const [stats, setStats] = useState({
@@ -27,6 +28,7 @@ export default function LaporanManagement() {
     approvalRate: 0
   })
   const [isLoading, setIsLoading] = useState(true)
+  const [showSessionModal, setShowSessionModal] = useState(false)
 
   useEffect(() => {
     fetchReportData()
@@ -49,26 +51,80 @@ export default function LaporanManagement() {
   const handleExportExcel = async (type: string) => {
     try {
       const response = await fetch(`/api/laporan?type=${type}`)
-      if (response.ok) {
-        const data = await response.json()
-        exportToExcel(data, `laporan-${type}-${new Date().toISOString().split('T')[0]}`, `Laporan ${type}`)
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
+      
+      const data = await response.json()
+      
+      if (!data || (Array.isArray(data) && data.length === 0)) {
+        alert('Tidak ada data untuk diekspor')
+        return
+      }
+      
+      exportToExcel(data, `laporan-${type}-${new Date().toISOString().split('T')[0]}`, `Laporan ${type.charAt(0).toUpperCase() + type.slice(1)}`)
+      
     } catch (error) {
       console.error('Export Excel error:', error)
-      alert('Gagal export ke Excel')
+      alert(`Gagal export ke Excel: ${error instanceof Error ? error.message : 'Terjadi kesalahan'}`)
     }
   }
 
   const handleExportPDF = async (type: string) => {
+    if (type === 'kehadiran') {
+      setShowSessionModal(true)
+      return
+    }
+
     try {
       const response = await fetch(`/api/laporan?type=${type}`)
-      if (response.ok) {
-        const data = await response.json()
-        await exportToPDF(data, `laporan-${type}-${new Date().toISOString().split('T')[0]}`, `Laporan ${type.toUpperCase()}`)
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
+      
+      const data = await response.json()
+      
+      if (!data || (Array.isArray(data) && data.length === 0)) {
+        alert('Tidak ada data untuk diekspor')
+        return
+      }
+      
+      await exportToPDF(data, `laporan-${type}-${new Date().toISOString().split('T')[0]}`, `Laporan ${type.charAt(0).toUpperCase() + type.slice(1)}`)
+      
     } catch (error) {
       console.error('Export PDF error:', error)
-      alert('Gagal export ke PDF')
+      alert(`Gagal export ke PDF: ${error instanceof Error ? error.message : 'Terjadi kesalahan'}`)
+    }
+  }
+
+  const handleExportSelectedSessions = async (selectedSessions: string[]) => {
+    try {
+      const response = await fetch('/api/laporan/selected-sessions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ sessionIds: selectedSessions })
+      })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      
+      if (!data || (Array.isArray(data) && data.length === 0)) {
+        alert('Tidak ada data untuk diekspor')
+        return
+      }
+      
+      await exportToPDF(data, `laporan-kehadiran-terpilih-${new Date().toISOString().split('T')[0]}`, 'Laporan Kehadiran Sesi Terpilih')
+      
+    } catch (error) {
+      console.error('Export selected sessions PDF error:', error)
+      alert(`Gagal export ke PDF: ${error instanceof Error ? error.message : 'Terjadi kesalahan'}`)
     }
   }
 
@@ -76,7 +132,7 @@ export default function LaporanManagement() {
     return (
       <div className="p-6">
         <div className="text-center">
-          <div className="loading-spinner mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Memuat data laporan...</p>
         </div>
       </div>
@@ -440,6 +496,13 @@ export default function LaporanManagement() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Session Selection Modal */}
+      <SessionSelectionModal
+        isOpen={showSessionModal}
+        onClose={() => setShowSessionModal(false)}
+        onExportPDF={handleExportSelectedSessions}
+      />
       </div>
     </RoleGuard>
   )

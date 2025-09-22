@@ -1,29 +1,16 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-
-type ToastType = 'success' | 'error' | 'warning' | 'info'
-
-interface ToastItem {
-  id: string
-  type: ToastType
-  message: string
-  duration?: number
-}
+import { Toast } from '@/components/ui/toast'
 
 export const useToast = () => {
-  const [toasts, setToasts] = useState<ToastItem[]>([])
+  const [toasts, setToasts] = useState<Toast[]>([])
 
-  const addToast = useCallback((toast: Omit<ToastItem, 'id'>) => {
+  const addToast = useCallback((toast: Omit<Toast, 'id'>) => {
     const id = Math.random().toString(36).substr(2, 9)
-    const newToast: ToastItem = { ...toast, id }
+    const newToast: Toast = { ...toast, id }
     
     setToasts(prev => [...prev, newToast])
-    
-    // Auto remove after duration
-    setTimeout(() => {
-      removeToast(id)
-    }, toast.duration || 4000)
   }, [])
 
   const removeToast = useCallback((id: string) => {

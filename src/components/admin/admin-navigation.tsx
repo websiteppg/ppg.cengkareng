@@ -33,8 +33,8 @@ const navigation = [
   { name: 'Peserta', href: '/admin/peserta', icon: Users },
   { name: 'Sesi Musyawarah', href: '/admin/sesi', icon: Calendar },
   { name: 'Notulensi', href: '/admin/notulensi', icon: FileText },
-  { name: 'Absensi', href: '/admin/absensi', icon: CheckSquare },
   { name: 'Laporan', href: '/admin/laporan', icon: BarChart3 },
+  { name: 'Absensi', href: '/admin/absensi', icon: CheckSquare },
 ]
 
 export default function AdminNavigation({ user }: AdminNavigationProps) {
