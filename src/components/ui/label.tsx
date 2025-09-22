@@ -1,1 +1,0 @@
-// Label component removed - using native HTML label instead
