@@ -14,8 +14,8 @@ interface Participant {
   id: string
   nama: string
   email: string
-  jabatan: string
-  instansi: string
+  jabatan: string | null
+  instansi: string | null
   role: string
   aktif: boolean
 }
@@ -37,20 +37,39 @@ export default function ParticipantManagement() {
       const response = await fetch('/api/peserta')
       if (response.ok) {
         const data = await response.json()
-        setParticipants(data)
+        // Ensure all participants have required fields
+        const safeData = data.map((p: any) => ({
+          ...p,
+          nama: p.nama || '',
+          email: p.email || '',
+          jabatan: p.jabatan || '',
+          instansi: p.instansi || '',
+          role: p.role || 'peserta'
+        }))
+        setParticipants(safeData)
+      } else {
+        console.error('Failed to fetch participants:', response.status)
+        toast.error('Gagal memuat data peserta')
       }
     } catch (error) {
       console.error('Error fetching participants:', error)
+      toast.error('Terjadi kesalahan saat memuat data')
     } finally {
       setIsLoading(false)
     }
   }
 
-  const filteredParticipants = participants.filter(p =>
-    p.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.instansi.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredParticipants = participants.filter(p => {
+    if (!p) return false
+    const searchLower = (searchTerm || '').toLowerCase()
+    const nama = (p.nama || '').toLowerCase()
+    const email = (p.email || '').toLowerCase()
+    const instansi = (p.instansi || '').toLowerCase()
+    
+    return nama.includes(searchLower) || 
+           email.includes(searchLower) || 
+           instansi.includes(searchLower)
+  })
 
   const getRoleText = (role: string) => {
     const roles = {
@@ -207,11 +226,11 @@ export default function ParticipantManagement() {
                 {filteredParticipants.map((participant) => (
                   <tr key={participant.id} className="border-b hover:bg-gray-50">
                     <td className="py-3 px-4">
-                      <div className="font-medium text-gray-900">{participant.nama}</div>
+                      <div className="font-medium text-gray-900">{participant.nama || 'Nama tidak tersedia'}</div>
                     </td>
-                    <td className="py-3 px-4 text-gray-600">{participant.email}</td>
-                    <td className="py-3 px-4 text-gray-600">{participant.jabatan}</td>
-                    <td className="py-3 px-4 text-gray-600">{participant.instansi}</td>
+                    <td className="py-3 px-4 text-gray-600">{participant.email || '-'}</td>
+                    <td className="py-3 px-4 text-gray-600">{participant.jabatan || '-'}</td>
+                    <td className="py-3 px-4 text-gray-600">{participant.instansi || '-'}</td>
                     <td className="py-3 px-4">
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(participant.role)}`}>
                         {getRoleText(participant.role)}
