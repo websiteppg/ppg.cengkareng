@@ -14,14 +14,15 @@ interface Participant {
   id: string
   nama: string
   email: string
-  jabatan: string | null
-  instansi: string | null
+  jabatan: string
+  instansi: string
   role: string
   aktif: boolean
 }
 
 export default function ParticipantManagement() {
   const [participants, setParticipants] = useState<Participant[]>([])
+  const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [editingParticipant, setEditingParticipant] = useState<Participant | null>(null)
@@ -34,41 +35,50 @@ export default function ParticipantManagement() {
 
   const fetchParticipants = async () => {
     try {
+      setError(null)
       const response = await fetch('/api/peserta')
       if (response.ok) {
         const data = await response.json()
-        // Ensure all participants have required fields
-        const safeData = data.map((p: any) => ({
-          ...p,
-          nama: p.nama || '',
-          email: p.email || '',
-          jabatan: p.jabatan || '',
-          instansi: p.instansi || '',
-          role: p.role || 'peserta'
-        }))
-        setParticipants(safeData)
+        if (Array.isArray(data)) {
+          const safeData = data.map((p: any) => ({
+            id: p.id || '',
+            nama: String(p.nama || ''),
+            email: String(p.email || ''),
+            jabatan: String(p.jabatan || ''),
+            instansi: String(p.instansi || ''),
+            role: String(p.role || 'peserta'),
+            aktif: Boolean(p.aktif)
+          }))
+          setParticipants(safeData)
+        } else {
+          setParticipants([])
+        }
       } else {
-        console.error('Failed to fetch participants:', response.status)
-        toast.error('Gagal memuat data peserta')
+        setError('Gagal memuat data peserta')
+        setParticipants([])
       }
     } catch (error) {
       console.error('Error fetching participants:', error)
-      toast.error('Terjadi kesalahan saat memuat data')
+      setError('Terjadi kesalahan saat memuat data')
+      setParticipants([])
     } finally {
       setIsLoading(false)
     }
   }
 
   const filteredParticipants = participants.filter(p => {
-    if (!p) return false
-    const searchLower = (searchTerm || '').toLowerCase()
-    const nama = (p.nama || '').toLowerCase()
-    const email = (p.email || '').toLowerCase()
-    const instansi = (p.instansi || '').toLowerCase()
-    
-    return nama.includes(searchLower) || 
-           email.includes(searchLower) || 
-           instansi.includes(searchLower)
+    try {
+      if (!p || !searchTerm) return true
+      const search = searchTerm.toLowerCase()
+      return (
+        String(p.nama || '').toLowerCase().includes(search) ||
+        String(p.email || '').toLowerCase().includes(search) ||
+        String(p.instansi || '').toLowerCase().includes(search)
+      )
+    } catch (error) {
+      console.error('Filter error:', error)
+      return true
+    }
   })
 
   const getRoleText = (role: string) => {
@@ -166,6 +176,17 @@ export default function ParticipantManagement() {
     )
   }
 
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <Button onClick={fetchParticipants}>Coba Lagi</Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <RoleGuard allowedRoles={['admin', 'super_admin', 'sekretaris_ppg']}>
       <div className="p-6">
@@ -226,11 +247,11 @@ export default function ParticipantManagement() {
                 {filteredParticipants.map((participant) => (
                   <tr key={participant.id} className="border-b hover:bg-gray-50">
                     <td className="py-3 px-4">
-                      <div className="font-medium text-gray-900">{participant.nama || 'Nama tidak tersedia'}</div>
+                      <div className="font-medium text-gray-900">{participant.nama}</div>
                     </td>
-                    <td className="py-3 px-4 text-gray-600">{participant.email || '-'}</td>
-                    <td className="py-3 px-4 text-gray-600">{participant.jabatan || '-'}</td>
-                    <td className="py-3 px-4 text-gray-600">{participant.instansi || '-'}</td>
+                    <td className="py-3 px-4 text-gray-600">{participant.email}</td>
+                    <td className="py-3 px-4 text-gray-600">{participant.jabatan}</td>
+                    <td className="py-3 px-4 text-gray-600">{participant.instansi}</td>
                     <td className="py-3 px-4">
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(participant.role)}`}>
                         {getRoleText(participant.role)}
