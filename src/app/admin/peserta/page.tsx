@@ -22,11 +22,10 @@ interface Participant {
 
 export default function ParticipantManagement() {
   const [participants, setParticipants] = useState<Participant[]>([])
-  const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [editingParticipant, setEditingParticipant] = useState<Participant | null>(null)
-  const [editForm, setEditForm] = useState({ nama: '', email: '', jabatan: '', instansi: '', role: '', password: '' })
+  const [editForm, setEditForm] = useState({ nama: '', jabatan: '', instansi: '', role: '', password: '' })
   const { toasts, removeToast, toast } = useToast()
 
   useEffect(() => {
@@ -35,51 +34,23 @@ export default function ParticipantManagement() {
 
   const fetchParticipants = async () => {
     try {
-      setError(null)
       const response = await fetch('/api/peserta')
       if (response.ok) {
         const data = await response.json()
-        if (Array.isArray(data)) {
-          const safeData = data.map((p: any) => ({
-            id: p.id || '',
-            nama: String(p.nama || ''),
-            email: String(p.email || ''),
-            jabatan: String(p.jabatan || ''),
-            instansi: String(p.instansi || ''),
-            role: String(p.role || 'peserta'),
-            aktif: Boolean(p.aktif)
-          }))
-          setParticipants(safeData)
-        } else {
-          setParticipants([])
-        }
-      } else {
-        setError('Gagal memuat data peserta')
-        setParticipants([])
+        setParticipants(data)
       }
     } catch (error) {
       console.error('Error fetching participants:', error)
-      setError('Terjadi kesalahan saat memuat data')
-      setParticipants([])
     } finally {
       setIsLoading(false)
     }
   }
 
-  const filteredParticipants = participants.filter(p => {
-    try {
-      if (!p || !searchTerm) return true
-      const search = searchTerm.toLowerCase()
-      return (
-        String(p.nama || '').toLowerCase().includes(search) ||
-        String(p.email || '').toLowerCase().includes(search) ||
-        String(p.instansi || '').toLowerCase().includes(search)
-      )
-    } catch (error) {
-      console.error('Filter error:', error)
-      return true
-    }
-  })
+  const filteredParticipants = participants.filter(p =>
+    p.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.instansi.toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
   const getRoleText = (role: string) => {
     const roles = {
@@ -126,7 +97,6 @@ export default function ParticipantManagement() {
     setEditingParticipant(participant)
     setEditForm({
       nama: participant.nama,
-      email: participant.email,
       jabatan: participant.jabatan,
       instansi: participant.instansi,
       role: participant.role,
@@ -135,23 +105,16 @@ export default function ParticipantManagement() {
   }
 
   const handleSaveEdit = async () => {
-    if (editingParticipant && editForm.nama && editForm.email && editForm.jabatan && editForm.instansi && editForm.role) {
-      const success = await updateParticipant(editingParticipant.id, editForm)
-      if (success) {
-        // Reset semua state terlebih dahulu
-        setEditingParticipant(null)
-        setEditForm({ nama: '', email: '', jabatan: '', instansi: '', role: '', password: '' })
-        setSearchTerm('') // Reset pencarian untuk menampilkan semua peserta
-        // Refresh data
-        await fetchParticipants()
-      }
+    if (editingParticipant && editForm.nama && editForm.jabatan && editForm.instansi && editForm.role) {
+      await updateParticipant(editingParticipant.id, editForm)
+      setEditingParticipant(null)
+      setEditForm({ nama: '', jabatan: '', instansi: '', role: '', password: '' })
     }
   }
 
   const handleCancelEdit = () => {
     setEditingParticipant(null)
-    setEditForm({ nama: '', email: '', jabatan: '', instansi: '', role: '', password: '' })
-    setSearchTerm('') // Reset pencarian untuk menampilkan semua peserta
+    setEditForm({ nama: '', jabatan: '', instansi: '', role: '', password: '' })
   }
 
   const updateParticipant = async (id: string, data: any) => {
@@ -164,15 +127,12 @@ export default function ParticipantManagement() {
       
       if (response.ok) {
         toast.success('Peserta berhasil diupdate')
-        return true
+        fetchParticipants() // Refresh data
       } else {
-        const errorData = await response.json()
-        toast.error(errorData.error || 'Gagal mengupdate peserta')
-        return false
+        toast.error('Gagal mengupdate peserta')
       }
     } catch (error) {
       toast.error('Terjadi kesalahan sistem')
-      return false
     }
   }
 
@@ -182,17 +142,6 @@ export default function ParticipantManagement() {
         <div className="text-center">
           <div className="loading-spinner mx-auto mb-4"></div>
           <p className="text-gray-600">Memuat data peserta...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="p-6">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">{error}</p>
-          <Button onClick={fetchParticipants}>Coba Lagi</Button>
         </div>
       </div>
     )
@@ -312,8 +261,8 @@ export default function ParticipantManagement() {
 
       {/* Edit Modal */}
       {editingParticipant && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] backdrop-blur-sm">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4 relative z-[10000] shadow-2xl">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold">Edit Peserta</h3>
               <Button variant="ghost" size="sm" onClick={handleCancelEdit}>
@@ -328,16 +277,6 @@ export default function ParticipantManagement() {
                   value={editForm.nama}
                   onChange={(e) => setEditForm({...editForm, nama: e.target.value})}
                   placeholder="Masukkan nama"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-1">Email</label>
-                <Input
-                  type="email"
-                  value={editForm.email}
-                  onChange={(e) => setEditForm({...editForm, email: e.target.value})}
-                  placeholder="Masukkan email"
                 />
               </div>
               
