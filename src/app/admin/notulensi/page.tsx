@@ -121,7 +121,7 @@ export default function NotulensiManagement() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Manajemen Notulensi</h1>
           <p className="text-gray-600 mt-2">
-            Kelola notulensi musyawarah PPG dan proses approval
+            Kelola Notulenasi Musyawarah dan Proses Approval
           </p>
         </div>
         <Link href="/admin/notulensi/buat">

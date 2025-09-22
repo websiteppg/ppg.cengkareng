@@ -155,7 +155,7 @@ export default function ParticipantManagement() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Manajemen Peserta</h1>
           <p className="text-gray-600 mt-2">
-            Kelola data peserta musyawarah PPG ({participants.length} peserta)
+            Kelola Data Peserta Musywarah ({participants.length} peserta)
           </p>
         </div>
         <Link href="/admin/peserta/tambah">
