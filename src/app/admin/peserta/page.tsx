@@ -136,9 +136,12 @@ export default function ParticipantManagement() {
 
   const handleSaveEdit = async () => {
     if (editingParticipant && editForm.nama && editForm.email && editForm.jabatan && editForm.instansi && editForm.role) {
-      await updateParticipant(editingParticipant.id, editForm)
-      setEditingParticipant(null)
-      setEditForm({ nama: '', email: '', jabatan: '', instansi: '', role: '', password: '' })
+      const success = await updateParticipant(editingParticipant.id, editForm)
+      if (success) {
+        setEditingParticipant(null)
+        setEditForm({ nama: '', email: '', jabatan: '', instansi: '', role: '', password: '' })
+        await fetchParticipants() // Refresh data untuk menampilkan semua peserta
+      }
     }
   }
 
@@ -157,12 +160,15 @@ export default function ParticipantManagement() {
       
       if (response.ok) {
         toast.success('Peserta berhasil diupdate')
-        fetchParticipants() // Refresh data
+        return true
       } else {
-        toast.error('Gagal mengupdate peserta')
+        const errorData = await response.json()
+        toast.error(errorData.error || 'Gagal mengupdate peserta')
+        return false
       }
     } catch (error) {
       toast.error('Terjadi kesalahan sistem')
+      return false
     }
   }
 
