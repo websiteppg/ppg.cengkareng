@@ -121,16 +121,35 @@ export async function PUT(request: NextRequest) {
   try {
     const url = new URL(request.url)
     const id = url.searchParams.get('id')
-    const { nama, jabatan, instansi, role, password } = await request.json()
+    const { nama, email, jabatan, instansi, role, password } = await request.json()
     
     if (!id) {
       return NextResponse.json({ error: 'ID peserta diperlukan' }, { status: 400 })
     }
 
+    if (!nama || !email) {
+      return NextResponse.json({ error: 'Nama dan email harus diisi' }, { status: 400 })
+    }
+
     const supabase = createServerClient()
 
+    // Check if email already exists for other users
+    const { data: existingUser } = await (supabase as any)
+      .from('peserta')
+      .select('id')
+      .eq('email', email)
+      .neq('id', id)
+      .single()
+
+    if (existingUser) {
+      return NextResponse.json(
+        { error: 'Email sudah digunakan oleh peserta lain' },
+        { status: 400 }
+      )
+    }
+
     // Prepare update data
-    const updateData: any = { nama, jabatan, instansi, role }
+    const updateData: any = { nama, email, jabatan, instansi, role }
     
     // Only update password if provided
     if (password && password.trim() !== '') {

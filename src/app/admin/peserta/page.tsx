@@ -26,7 +26,7 @@ export default function ParticipantManagement() {
   const [searchTerm, setSearchTerm] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [editingParticipant, setEditingParticipant] = useState<Participant | null>(null)
-  const [editForm, setEditForm] = useState({ nama: '', jabatan: '', instansi: '', role: '', password: '' })
+  const [editForm, setEditForm] = useState({ nama: '', email: '', jabatan: '', instansi: '', role: '', password: '' })
   const { toasts, removeToast, toast } = useToast()
 
   useEffect(() => {
@@ -126,6 +126,7 @@ export default function ParticipantManagement() {
     setEditingParticipant(participant)
     setEditForm({
       nama: participant.nama,
+      email: participant.email,
       jabatan: participant.jabatan,
       instansi: participant.instansi,
       role: participant.role,
@@ -134,16 +135,16 @@ export default function ParticipantManagement() {
   }
 
   const handleSaveEdit = async () => {
-    if (editingParticipant && editForm.nama && editForm.jabatan && editForm.instansi && editForm.role) {
+    if (editingParticipant && editForm.nama && editForm.email && editForm.jabatan && editForm.instansi && editForm.role) {
       await updateParticipant(editingParticipant.id, editForm)
       setEditingParticipant(null)
-      setEditForm({ nama: '', jabatan: '', instansi: '', role: '', password: '' })
+      setEditForm({ nama: '', email: '', jabatan: '', instansi: '', role: '', password: '' })
     }
   }
 
   const handleCancelEdit = () => {
     setEditingParticipant(null)
-    setEditForm({ nama: '', jabatan: '', instansi: '', role: '', password: '' })
+    setEditForm({ nama: '', email: '', jabatan: '', instansi: '', role: '', password: '' })
   }
 
   const updateParticipant = async (id: string, data: any) => {
@@ -317,6 +318,16 @@ export default function ParticipantManagement() {
                   value={editForm.nama}
                   onChange={(e) => setEditForm({...editForm, nama: e.target.value})}
                   placeholder="Masukkan nama"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-1">Email</label>
+                <Input
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm({...editForm, email: e.target.value})}
+                  placeholder="Masukkan email"
                 />
               </div>
               
