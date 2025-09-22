@@ -113,6 +113,31 @@ type ToastProps = React.ComponentPropsWithoutRef<typeof Toast>
 
 type ToastActionElement = React.ReactElement<typeof ToastAction>
 
+interface ToastContainerProps {
+  toasts: Array<{
+    id: string
+    type: 'success' | 'error' | 'warning' | 'info'
+    message: string
+    duration?: number
+  }>
+  onRemove: (id: string) => void
+}
+
+const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onRemove }) => {
+  return (
+    <ToastProvider>
+      {toasts.map((toast) => (
+        <Toast key={toast.id} variant={toast.type === 'error' ? 'destructive' : 'default'}>
+          <ToastTitle>{toast.type.charAt(0).toUpperCase() + toast.type.slice(1)}</ToastTitle>
+          <ToastDescription>{toast.message}</ToastDescription>
+          <ToastClose onClick={() => onRemove(toast.id)} />
+        </Toast>
+      ))}
+      <ToastViewport />
+    </ToastProvider>
+  )
+}
+
 export {
   type ToastProps,
   type ToastActionElement,
@@ -123,4 +148,5 @@ export {
   ToastDescription,
   ToastClose,
   ToastAction,
+  ToastContainer,
 }
