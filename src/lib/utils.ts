@@ -65,10 +65,7 @@ export function getStatusColor(status: string): string {
     'pending_approval': 'bg-orange-100 text-orange-800',
     'approved': 'bg-green-100 text-green-800',
     'rejected': 'bg-red-100 text-red-800',
-    'hadir': 'bg-green-100 text-green-800',
-    'terlambat': 'bg-yellow-100 text-yellow-800',
-    'izin': 'bg-blue-100 text-blue-800',
-    'sakit': 'bg-red-100 text-red-800',
+
   }
   return colors[status] || 'bg-gray-100 text-gray-800'
 }
@@ -83,10 +80,7 @@ export function getStatusText(status: string): string {
     'pending_approval': 'Menunggu Persetujuan',
     'approved': 'Disetujui',
     'rejected': 'Ditolak',
-    'hadir': 'Hadir',
-    'terlambat': 'Terlambat',
-    'izin': 'Izin',
-    'sakit': 'Sakit',
+
     'peserta': 'Peserta',
     'sekretaris_ppg': 'Sekretaris PPG',
     'admin': 'Admin',

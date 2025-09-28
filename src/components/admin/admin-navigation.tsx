@@ -14,8 +14,11 @@ import {
   Menu, 
   X,
   Home,
-  CheckSquare,
-  MessageSquare
+  MessageSquare,
+  MapPin,
+  PieChart,
+
+  Cloud
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -33,8 +36,11 @@ const navigation = [
   { name: 'Peserta', href: '/admin/peserta', icon: Users },
   { name: 'Sesi Musyawarah', href: '/admin/sesi', icon: Calendar },
   { name: 'Notulensi', href: '/admin/notulensi', icon: FileText },
+
+  { name: 'MediaFire Manager', href: '/admin/mediafire-manager', icon: Cloud, superAdminOnly: true },
   { name: 'Laporan', href: '/admin/laporan', icon: BarChart3 },
-  { name: 'Absensi', href: '/admin/absensi', icon: CheckSquare },
+  { name: 'Dashboard KBM', href: '/admin/dashboard-kbm', icon: PieChart },
+  { name: 'Laporan KBM Desa', href: '/admin/kbm-desa', icon: MapPin },
 ]
 
 export default function AdminNavigation({ user }: AdminNavigationProps) {
@@ -67,18 +73,40 @@ export default function AdminNavigation({ user }: AdminNavigationProps) {
       'super_admin': 'Super Admin',
       'admin': 'Admin',
       'sekretaris_ppg': 'Sekretaris PPG',
-      'admin_kmm': 'Admin KMM'
+
+      'admin_kmm': 'Admin KMM',
+      'kbm_desa_kalideres': 'KBM Desa Kalideres',
+      'kbm_desa_bandara': 'KBM Desa Bandara',
+      'kbm_desa_kebon_jahe': 'KBM Desa Kebon Jahe',
+      'kbm_desa_cengkareng': 'KBM Desa Cengkareng',
+      'kbm_desa_kapuk_melati': 'KBM Desa Kapuk Melati',
+      'kbm_desa_taman_kota': 'KBM Desa Taman Kota',
+      'kbm_desa_jelambar': 'KBM Desa Jelambar',
+      'kbm_desa_cipondoh': 'KBM Desa Cipondoh'
     }
     return roles[role as keyof typeof roles] || role
   }
 
   const getFilteredNavigation = (userRole: string) => {
+    let filteredNav = navigation
+    
+    // Filter MediaFire Manager - only for super_admin
+    if (userRole !== 'super_admin') {
+      filteredNav = filteredNav.filter(item => !item.superAdminOnly)
+    }
+    
     if (userRole === 'admin_kmm') {
-      return navigation.filter(item => 
+      return filteredNav.filter(item => 
         ['Sesi Musyawarah', 'Notulensi'].includes(item.name)
       )
     }
-    return navigation
+    if (userRole.startsWith('kbm_desa_')) {
+      return filteredNav.filter(item => 
+        ['Dashboard KBM', 'Laporan KBM Desa'].includes(item.name)
+      )
+    }
+
+    return filteredNav
   }
 
   return (
@@ -100,8 +128,8 @@ export default function AdminNavigation({ user }: AdminNavigationProps) {
           {/* Header */}
           <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <Users className="w-5 h-5 text-white" />
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center">
+                <img src="/logo-small.png" alt="PPG Logo" className="w-8 h-8 object-contain" />
               </div>
               <div>
                 <h1 className="text-lg font-semibold text-gray-900">PPG Admin</h1>
@@ -138,6 +166,41 @@ export default function AdminNavigation({ user }: AdminNavigationProps) {
           <nav className="flex-1 px-4 py-4 space-y-1">
             {getFilteredNavigation(user.role).map((item) => {
               const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+              
+              if (item.submenu) {
+                return (
+                  <div key={item.name} className="space-y-1">
+                    <div className={cn(
+                      "flex items-center px-3 py-2 text-sm font-medium rounded-md",
+                      isActive ? "bg-blue-50 text-blue-700" : "text-gray-600"
+                    )}>
+                      <item.icon className="w-5 h-5 mr-3" />
+                      {item.name}
+                    </div>
+                    <div className="ml-6 space-y-1">
+                      {item.submenu.map((subItem) => {
+                        const subIsActive = pathname === subItem.href
+                        return (
+                          <Link
+                            key={subItem.name}
+                            href={subItem.href}
+                            className={cn(
+                              "block px-3 py-2 text-sm rounded-md transition-colors",
+                              subIsActive
+                                ? "bg-blue-100 text-blue-700 font-medium"
+                                : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+                            )}
+                            onClick={() => setSidebarOpen(false)}
+                          >
+                            {subItem.name}
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              }
+              
               return (
                 <Link
                   key={item.name}
@@ -181,7 +244,7 @@ export default function AdminNavigation({ user }: AdminNavigationProps) {
             <Menu className="w-6 h-6" />
           </button>
           <h1 className="text-lg font-semibold text-gray-900">
-            Sistem Musyawarah PPG
+            PPG Jakarta Barat Cengkareng
           </h1>
           <div className="w-10" /> {/* Spacer */}
         </div>

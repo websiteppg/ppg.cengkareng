@@ -14,7 +14,7 @@ interface CustomReportModalProps {
 
 export default function CustomReportModal({ isOpen, onClose, onGenerate }: CustomReportModalProps) {
   const [formData, setFormData] = useState({
-    jenis_laporan: 'kehadiran',
+    jenis_laporan: 'peserta',
     tanggal_mulai: '',
     tanggal_selesai: '',
     status_filter: 'semua',
@@ -58,7 +58,7 @@ export default function CustomReportModal({ isOpen, onClose, onGenerate }: Custo
                 className="w-full p-2 border rounded-md"
                 required
               >
-                <option value="kehadiran">Laporan Kehadiran</option>
+
                 <option value="peserta">Laporan Peserta</option>
                 <option value="sesi">Laporan Sesi</option>
                 <option value="notulensi">Laporan Notulensi</option>
@@ -93,23 +93,7 @@ export default function CustomReportModal({ isOpen, onClose, onGenerate }: Custo
               </div>
             </div>
 
-            {formData.jenis_laporan === 'kehadiran' && (
-              <div>
-                <label className="block text-sm font-medium mb-2">Status Kehadiran</label>
-                <select
-                  name="status_filter"
-                  value={formData.status_filter}
-                  onChange={handleChange}
-                  className="w-full p-2 border rounded-md"
-                >
-                  <option value="semua">Semua Status</option>
-                  <option value="hadir">Hadir</option>
-                  <option value="terlambat">Terlambat</option>
-                  <option value="izin">Izin</option>
-                  <option value="sakit">Sakit</option>
-                </select>
-              </div>
-            )}
+
 
             {formData.jenis_laporan === 'peserta' && (
               <div>

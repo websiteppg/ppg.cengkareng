@@ -5,7 +5,7 @@ export const NOTULENSI_TEMPLATE = `
 <p><strong>Tanggal:</strong> [TANGGAL]</p>
 <p><strong>Waktu:</strong> [WAKTU_MULAI] - [WAKTU_SELESAI] WIB</p>
 <p><strong>Tempat:</strong> [LOKASI]</p>
-<p><strong>Jumlah Peserta Hadir:</strong> [JUMLAH_HADIR] dari [TOTAL_PESERTA] orang</p>
+<p><strong>Total Peserta:</strong> [TOTAL_PESERTA] orang</p>
 
 <hr>
 
@@ -88,7 +88,6 @@ export const NOTULENSI_TEMPLATE = `
 
 export function generateNotulensiTemplate(
   session: any, 
-  attendanceCount: number, 
   totalParticipants: number,
   secretaryName: string = '[Nama akan diisi otomatis]'
 ): string {
@@ -98,7 +97,6 @@ export function generateNotulensiTemplate(
     .replace('[WAKTU_MULAI]', session.waktu_mulai)
     .replace('[WAKTU_SELESAI]', session.waktu_selesai)
     .replace('[LOKASI]', session.lokasi || 'Tidak ditentukan')
-    .replace('[JUMLAH_HADIR]', attendanceCount.toString())
     .replace('[TOTAL_PESERTA]', totalParticipants.toString())
     .replace('[NAMA_SEKRETARIS]', secretaryName)
     .replace('[TANGGAL_DIBUAT]', new Date().toLocaleDateString('id-ID'))
