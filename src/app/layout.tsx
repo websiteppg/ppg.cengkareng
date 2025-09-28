@@ -6,9 +6,9 @@ import { Toaster } from 'sonner'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Sistem Musyawarah PPG',
-  description: 'Sistem Manajemen Musyawarah PPG dengan Notulensi dan Absensi',
-  keywords: 'PPG, musyawarah, notulensi, absensi, pendidikan',
+  title: 'PPG Jakarta Barat Cengkareng',
+  description: 'Website Manajemen PPG Jakarta Barat Cengkareng',
+  keywords: 'PPG, musyawarah, notulensi, pendidikan',
   authors: [{ name: 'PPG Indonesia' }],
   themeColor: '#3b82f6',
   manifest: '/manifest.json',

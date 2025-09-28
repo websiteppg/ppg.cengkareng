@@ -14,21 +14,23 @@ import {
   PieChart,
   Activity
 } from 'lucide-react'
-import { exportToExcel, exportToPDF } from '@/lib/export'
+import { exportToExcel, exportToPDF, exportNotulensiToPDF } from '@/lib/export'
 import RoleGuard from '@/components/admin/role-guard'
-import SessionSelectionModal from '@/components/admin/session-selection-modal'
+
+import NotulensiSelectionModal from '@/components/admin/notulensi-selection-modal'
 
 export default function LaporanManagement() {
   const [stats, setStats] = useState({
     totalParticipants: 0,
     totalSessions: 0,
-    totalAttendance: 0,
+
     totalNotes: 0,
-    attendanceRate: 0,
+
     approvalRate: 0
   })
   const [isLoading, setIsLoading] = useState(true)
-  const [showSessionModal, setShowSessionModal] = useState(false)
+
+  const [showNotulensiModal, setShowNotulensiModal] = useState(false)
 
   useEffect(() => {
     fetchReportData()
@@ -72,8 +74,8 @@ export default function LaporanManagement() {
   }
 
   const handleExportPDF = async (type: string) => {
-    if (type === 'kehadiran') {
-      setShowSessionModal(true)
+    if (type === 'notulensi') {
+      setShowNotulensiModal(true)
       return
     }
 
@@ -99,14 +101,16 @@ export default function LaporanManagement() {
     }
   }
 
-  const handleExportSelectedSessions = async (selectedSessions: string[]) => {
+
+
+  const handleExportSelectedNotulensi = async (selectedNotulensi: string) => {
     try {
-      const response = await fetch('/api/laporan/selected-sessions', {
+      const response = await fetch('/api/laporan/notulensi-export', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ sessionIds: selectedSessions })
+        body: JSON.stringify({ notulensiId: selectedNotulensi })
       })
       
       if (!response.ok) {
@@ -115,16 +119,16 @@ export default function LaporanManagement() {
       
       const data = await response.json()
       
-      if (!data || (Array.isArray(data) && data.length === 0)) {
-        alert('Tidak ada data untuk diekspor')
+      if (!data) {
+        alert('Tidak ada data notulensi untuk diekspor')
         return
       }
       
-      await exportToPDF(data, `laporan-kehadiran-terpilih-${new Date().toISOString().split('T')[0]}`, 'Laporan Kehadiran Sesi Terpilih')
+      await exportNotulensiToPDF(data, `notulensi-${data.judul.replace(/[^a-zA-Z0-9]/g, '-')}-${new Date().toISOString().split('T')[0]}`)
       
     } catch (error) {
-      console.error('Export selected sessions PDF error:', error)
-      alert(`Gagal export ke PDF: ${error instanceof Error ? error.message : 'Terjadi kesalahan'}`)
+      console.error('Export notulensi PDF error:', error)
+      alert(`Gagal export PDF notulensi: ${error instanceof Error ? error.message : 'Terjadi kesalahan'}`)
     }
   }
 
@@ -146,7 +150,7 @@ export default function LaporanManagement() {
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Laporan & Analitik</h1>
         <p className="text-gray-600 mt-2">
-          Dashboard Laporan dan Analisis Data Musyawarah
+          Dashboard Laporan Dan Analisis Data Musyawarah
         </p>
       </div>
 
@@ -176,17 +180,7 @@ export default function LaporanManagement() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <CheckCircle className="w-8 h-8 text-purple-600 mr-4" />
-              <div>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalAttendance}</p>
-                <p className="text-sm text-gray-600">Total Kehadiran</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+
 
         <Card>
           <CardContent className="p-6">
@@ -203,28 +197,7 @@ export default function LaporanManagement() {
 
       {/* Performance Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <TrendingUp className="w-5 h-5 mr-2" />
-              Tingkat Kehadiran
-            </CardTitle>
-            <CardDescription>
-              Persentase kehadiran peserta dalam musyawarah
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-3xl font-bold text-green-600">{stats.attendanceRate}%</p>
-                <p className="text-sm text-gray-600">Rata-rata kehadiran</p>
-              </div>
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-                <TrendingUp className="w-8 h-8 text-green-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+
 
         <Card>
           <CardHeader>
@@ -252,49 +225,7 @@ export default function LaporanManagement() {
 
       {/* Report Categories */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Attendance Report */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <BarChart3 className="w-5 h-5 mr-2" />
-              Laporan Kehadiran
-            </CardTitle>
-            <CardDescription>
-              Analisis data kehadiran peserta per sesi
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex justify-between text-sm">
-                <span>Total Absensi:</span>
-                <span className="font-medium">{stats.totalAttendance}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Tingkat Kehadiran:</span>
-                <span className="font-medium text-green-600">{stats.attendanceRate}%</span>
-              </div>
-              <div className="flex space-x-2 mt-4">
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  className="flex-1"
-                  onClick={() => handleExportExcel('kehadiran')}
-                >
-                  <Download className="w-4 h-4 mr-1" />
-                  Excel
-                </Button>
-                <Button 
-                  size="sm" 
-                  className="flex-1"
-                  onClick={() => handleExportPDF('kehadiran')}
-                >
-                  <Download className="w-4 h-4 mr-1" />
-                  PDF
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+
 
         {/* Participant Report */}
         <Card>
@@ -497,11 +428,13 @@ export default function LaporanManagement() {
         </Card>
       </div>
 
-      {/* Session Selection Modal */}
-      <SessionSelectionModal
-        isOpen={showSessionModal}
-        onClose={() => setShowSessionModal(false)}
-        onExportPDF={handleExportSelectedSessions}
+
+
+      {/* Notulensi Selection Modal */}
+      <NotulensiSelectionModal
+        isOpen={showNotulensiModal}
+        onClose={() => setShowNotulensiModal(false)}
+        onExportPDF={handleExportSelectedNotulensi}
       />
       </div>
     </RoleGuard>

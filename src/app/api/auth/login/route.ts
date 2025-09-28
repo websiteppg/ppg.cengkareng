@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const supabase = createServerClient()
+    const supabase = createClient()
 
     // Debug: Log the query
     console.log('Searching for user:', email)
@@ -65,8 +65,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check admin role
-    if (!['admin', 'super_admin', 'sekretaris_ppg', 'admin_kmm'].includes(userData.role)) {
+    // Check admin role (termasuk KBM Desa)
+    const allowedRoles = [
+      'admin', 'super_admin', 'sekretaris_ppg', 'bidang_ppg', 'admin_kmm',
+      'kbm_desa_kalideres', 'kbm_desa_bandara', 'kbm_desa_kebon_jahe',
+      'kbm_desa_cengkareng', 'kbm_desa_kapuk_melati', 'kbm_desa_taman_kota',
+      'kbm_desa_jelambar', 'kbm_desa_cipondoh'
+    ]
+    
+    if (!allowedRoles.includes(userData.role)) {
       return NextResponse.json(
         { error: 'Akses ditolak. Anda bukan admin.' },
         { status: 403 }

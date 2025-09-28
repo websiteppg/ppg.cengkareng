@@ -1,140 +1,131 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
+
+export async function GET(request: NextRequest) {
+  try {
+    const supabase = createClient()
+    const { searchParams } = new URL(request.url)
+    const sesiId = searchParams.get('sesi_id')
+    const pesertaId = searchParams.get('peserta_id')
+
+    let query = supabase
+      .from('absensi')
+      .select(`
+        *,
+        peserta:peserta_id(nama, email),
+        sesi:sesi_id(nama_sesi, tanggal)
+      `)
+
+    if (sesiId) {
+      query = query.eq('sesi_id', sesiId)
+    }
+
+    if (pesertaId) {
+      query = query.eq('peserta_id', pesertaId)
+    }
+
+    const { data: absensi, error } = await query.order('created_at', { ascending: false })
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ data: absensi })
+  } catch (error) {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const { peserta_id, sesi_id, status_kehadiran, catatan } = await request.json()
+    const supabase = createClient()
+    const body = await request.json()
+    const { peserta_id, sesi_id, status_kehadiran, catatan } = body
 
-    if (!peserta_id || !sesi_id) {
-      return NextResponse.json(
-        { error: 'Data peserta dan sesi harus diisi' },
-        { status: 400 }
-      )
-    }
-
-    const supabase = createServerClient()
-
-    // Check if attendance already exists
-    const { data: existingAttendance } = await supabase
-      .from('absensi')
-      .select('id')
-      .eq('peserta_id', peserta_id)
-      .eq('sesi_id', sesi_id)
-      .single()
-
-    if (existingAttendance) {
-      return NextResponse.json(
-        { error: 'Anda sudah melakukan absensi untuk sesi ini' },
-        { status: 400 }
-      )
-    }
-
-    // Check if session exists and is active
-    const { data: session, error: sessionError } = await supabase
-      .from('sesi_musyawarah')
-      .select('status, tanggal, waktu_mulai, waktu_selesai, batas_absen_mulai, batas_absen_selesai')
-      .eq('id', sesi_id)
-      .single()
-
-    if (sessionError || !session) {
-      return NextResponse.json(
-        { error: 'Sesi tidak ditemukan' },
-        { status: 404 }
-      )
-    }
-
-    // Skip time validation for testing - allow attendance anytime
-    // TODO: Re-enable time validation for production
-    const now = new Date()
-    
-    /*
-    // Check if attendance is within allowed time window
-    const sessionData = session as any
-    const sessionDate = new Date(sessionData.tanggal)
-    const [startHour, startMinute] = sessionData.waktu_mulai.split(':').map(Number)
-    const [endHour, endMinute] = sessionData.waktu_selesai.split(':').map(Number)
-    
-    const sessionStart = new Date(sessionDate)
-    sessionStart.setHours(startHour, startMinute, 0, 0)
-    
-    const sessionEnd = new Date(sessionDate)
-    sessionEnd.setHours(endHour, endMinute, 0, 0)
-
-    const attendanceStart = new Date(sessionStart.getTime() - ((sessionData.batas_absen_mulai || 30) * 60000))
-    const attendanceEnd = new Date(sessionEnd.getTime() + ((sessionData.batas_absen_selesai || 15) * 60000))
-
-    if (now < attendanceStart || now > attendanceEnd) {
-      return NextResponse.json(
-        { error: 'Waktu absensi sudah berakhir atau belum dimulai' },
-        { status: 400 }
-      )
-    }
-    */
-
-    // Validate status_kehadiran
-    const validStatuses = ['hadir', 'ghoib', 'izin', 'sakit']
-    if (!validStatuses.includes(status_kehadiran)) {
-      return NextResponse.json(
-        { error: 'Status kehadiran tidak valid' },
-        { status: 400 }
-      )
-    }
-
-    // Use selected status directly for testing
-    let finalStatus = status_kehadiran
-
-    // Insert attendance record
-    const { data: attendance, error } = await (supabase as any)
+    const { data, error } = await (supabase as any)
       .from('absensi')
       .insert({
         peserta_id,
         sesi_id,
-        status_kehadiran: finalStatus,
+        status_kehadiran,
         catatan,
-        ip_address: request.ip,
-        user_agent: request.headers.get('user-agent'),
-        waktu_absen: now.toISOString()
+        waktu_absen: new Date().toISOString(),
+        ip_address: request.ip || '127.0.0.1',
+        user_agent: request.headers.get('user-agent') || 'Unknown'
       })
       .select()
       .single()
 
     if (error) {
-      return NextResponse.json(
-        { error: 'Gagal menyimpan absensi' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // Log activity (optional - remove if table doesn't exist)
-    try {
-      await (supabase as any)
-        .from('log_aktivitas')
+    return NextResponse.json({ data })
+  } catch (error) {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const supabase = createClient()
+    const body = await request.json()
+    const { peserta_id, sesi_id, status_kehadiran, catatan } = body
+
+    if (!peserta_id || !sesi_id || !status_kehadiran) {
+      return NextResponse.json({ error: 'Data tidak lengkap' }, { status: 400 })
+    }
+
+    // Check if record exists
+    const { data: existing } = await (supabase as any)
+      .from('absensi')
+      .select('*')
+      .eq('peserta_id', peserta_id)
+      .eq('sesi_id', sesi_id)
+      .single()
+
+    if (existing) {
+      // Update existing record using peserta_id and sesi_id
+      const { data, error } = await (supabase as any)
+        .from('absensi')
+        .update({
+          status_kehadiran,
+          catatan,
+          waktu_absen: new Date().toISOString()
+        })
+        .eq('peserta_id', peserta_id)
+        .eq('sesi_id', sesi_id)
+        .select()
+        .single()
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+
+      return NextResponse.json({ data, message: 'Status absensi berhasil diupdate' })
+    } else {
+      // Insert new record if not exists
+      const { data, error } = await (supabase as any)
+        .from('absensi')
         .insert({
           peserta_id,
-          aktivitas: 'attendance_recorded',
-          detail: { 
-            sesi_id, 
-            status: finalStatus,
-            ip: request.ip 
-          },
-          ip_address: request.ip,
-          user_agent: request.headers.get('user-agent')
+          sesi_id,
+          status_kehadiran,
+          catatan,
+          waktu_absen: new Date().toISOString(),
+          ip_address: request.ip || '127.0.0.1',
+          user_agent: request.headers.get('user-agent') || 'Admin Update'
         })
-    } catch (logError) {
-      console.log('Log activity failed:', logError)
+        .select()
+        .single()
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+
+      return NextResponse.json({ data, message: 'Absensi berhasil dibuat' })
     }
-
-    return NextResponse.json({
-      success: true,
-      attendance,
-      message: 'Absensi berhasil dicatat'
-    })
-
   } catch (error) {
-    console.error('Attendance error:', error)
-    return NextResponse.json(
-      { error: 'Terjadi kesalahan sistem' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Users, Calendar, FileText, CheckSquare, TrendingUp, Clock } from 'lucide-react'
+import { Users, Calendar, FileText, TrendingUp, Clock } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@supabase/supabase-js'
 import { getUserFromStorage } from '@/lib/auth'
@@ -22,13 +22,7 @@ interface RecentSession {
   status: string
 }
 
-interface RecentAttendance {
-  id: any
-  status_kehadiran: any
-  created_at: any
-  peserta: any
-  sesi: any
-}
+
 
 export default function AdminDashboard() {
   const router = useRouter()
@@ -38,26 +32,42 @@ export default function AdminDashboard() {
     activeSessions: number
     pendingNotes: number
     recentSessions: RecentSession[]
-    recentAttendance: RecentAttendance[]
+
   }>({
     totalParticipants: 0,
     totalSessions: 0,
     activeSessions: 0,
     pendingNotes: 0,
     recentSessions: [],
-    recentAttendance: []
+
   })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Check if admin_kmm should be redirected
     const user = getUserFromStorage()
-    if (user && user.role === 'admin_kmm') {
-      router.push('/admin/sesi')
-      return
+    
+    if (user) {
+      // Redirect admin_kmm to sesi page
+      if (user.role === 'admin_kmm') {
+        window.location.href = '/admin/sesi'
+        return
+      }
+      
+      // Redirect bidang_ppg to program kerja page
+      if (user.role === 'bidang_ppg') {
+        window.location.href = '/admin/program-kerja-admin'
+        return
+      }
+      
+      // Redirect KBM Desa users to their KBM dashboard
+      if (user.role && user.role.startsWith('kbm_desa_')) {
+        window.location.href = '/admin/kbm-desa'
+        return
+      }
     }
+    
     fetchDashboardData()
-  }, [router])
+  }, [])
 
   const fetchDashboardData = async () => {
     try {
@@ -91,16 +101,7 @@ export default function AdminDashboard() {
         .order('created_at', { ascending: false })
         .limit(5)
 
-      // Get recent attendance
-      const { data: recentAttendance } = await supabase
-        .from('absensi')
-        .select(`
-          id, status_kehadiran, created_at,
-          peserta:peserta_id(nama),
-          sesi:sesi_id(nama_sesi)
-        `)
-        .order('created_at', { ascending: false })
-        .limit(5)
+
 
       setStats({
         totalParticipants: totalParticipants || 0,
@@ -108,7 +109,7 @@ export default function AdminDashboard() {
         activeSessions: activeSessions || 0,
         pendingNotes: pendingNotes || 0,
         recentSessions: recentSessions || [],
-        recentAttendance: recentAttendance || []
+
       })
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
@@ -135,14 +136,12 @@ export default function AdminDashboard() {
     return colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800'
   }
 
-  const getAttendanceColor = (status: string) => {
-    const colors = {
-      'hadir': 'bg-green-100 text-green-800',
-      'terlambat': 'bg-yellow-100 text-yellow-800',
-      'izin': 'bg-blue-100 text-blue-800',
-      'sakit': 'bg-purple-100 text-purple-800'
-    }
-    return colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800'
+
+
+  // Check for redirect first
+  const user = getUserFromStorage()
+  if (user && user.role && user.role.startsWith('kbm_desa_')) {
+    return null // Don't render anything
   }
 
   if (loading) {
@@ -161,7 +160,7 @@ export default function AdminDashboard() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Dashboard Admin</h1>
         <p className="text-gray-600 mt-2">
-          Selamat Datang di Sistem Manajemen Musyawarah
+          Selamat Datang di PPG Jakarta Barat Cengkareng
         </p>
       </div>
 
@@ -283,39 +282,7 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Absensi Terbaru</CardTitle>
-            <CardDescription>
-              {stats.recentAttendance.length} absensi terbaru
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {stats.recentAttendance.length > 0 ? (
-                stats.recentAttendance.map((absensi) => (
-                  <div key={absensi.id} className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {absensi.peserta?.nama || 'Unknown'}
-                      </p>
-                      <p className="text-xs text-gray-500 truncate">
-                        {absensi.sesi?.nama_sesi || 'Unknown Session'}
-                      </p>
-                    </div>
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getAttendanceColor(absensi.status_kehadiran)}`}>
-                      {absensi.status_kehadiran === 'hadir' ? 'Hadir' : 
-                       absensi.status_kehadiran === 'terlambat' ? 'Terlambat' :
-                       absensi.status_kehadiran === 'izin' ? 'Izin' : 'Sakit'}
-                    </span>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-gray-500">Belum ada data absensi</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+
       </div>
 
       {/* System Status */}

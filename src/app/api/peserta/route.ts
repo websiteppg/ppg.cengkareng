@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createServerClient()
+    const supabase = createClient()
 
     const { data: participants, error } = await supabase
       .from('peserta')
@@ -13,15 +13,15 @@ export async function GET(request: NextRequest) {
     // Transform data to match expected format
     const transformedParticipants = participants?.map((p: any) => ({
       id: p.id,
-      nama: p.nama || '',
-      username: p.email || '', // Map email to username
-      bidang: p.instansi || '', // Map instansi to bidang
-      email: p.email || '',
-      nomor_hp: p.nomor_hp || '',
-      jabatan: p.jabatan || '',
-      instansi: p.instansi || '',
-      role: p.role || 'peserta',
-      aktif: p.aktif ?? true,
+      nama: p.nama,
+      username: p.email, // Map email to username
+      bidang: p.instansi, // Map instansi to bidang
+      email: p.email,
+      nomor_hp: p.nomor_hp,
+      jabatan: p.jabatan,
+      instansi: p.instansi,
+      role: p.role,
+      aktif: p.aktif,
       created_at: p.created_at
     })) || []
 
@@ -58,12 +58,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate role
-    const validRoles = ['peserta', 'sekretaris_ppg', 'admin_kmm', 'admin', 'super_admin']
+    const validRoles = [
+      'peserta', 'sekretaris_ppg', 'bidang_ppg', 'admin_kmm', 'admin', 'super_admin',
+      'kbm_desa_kalideres', 'kbm_desa_bandara', 'kbm_desa_kebon_jahe', 
+      'kbm_desa_cengkareng', 'kbm_desa_kapuk_melati', 'kbm_desa_taman_kota', 
+      'kbm_desa_jelambar', 'kbm_desa_cipondoh'
+    ]
     const finalRole = role && validRoles.includes(role) ? role : 'peserta'
 
     console.log('Final role:', finalRole)
 
-    const supabase = createServerClient()
+    const supabase = createClient()
 
     // Check if username already exists
     const { data: existingUser } = await (supabase as any)
@@ -123,11 +128,26 @@ export async function PUT(request: NextRequest) {
     const id = url.searchParams.get('id')
     const { nama, jabatan, instansi, role, password } = await request.json()
     
+    console.log('PUT request data:', { id, nama, jabatan, instansi, role, password: password ? '[HIDDEN]' : 'null' })
+    
     if (!id) {
       return NextResponse.json({ error: 'ID peserta diperlukan' }, { status: 400 })
     }
 
-    const supabase = createServerClient()
+    // Validate role
+    const validRoles = [
+      'peserta', 'sekretaris_ppg', 'bidang_ppg', 'admin_kmm', 'admin', 'super_admin',
+      'kbm_desa_kalideres', 'kbm_desa_bandara', 'kbm_desa_kebon_jahe', 
+      'kbm_desa_cengkareng', 'kbm_desa_kapuk_melati', 'kbm_desa_taman_kota', 
+      'kbm_desa_jelambar', 'kbm_desa_cipondoh'
+    ]
+    
+    if (role && !validRoles.includes(role)) {
+      console.log('Invalid role:', role)
+      return NextResponse.json({ error: `Role tidak valid: ${role}` }, { status: 400 })
+    }
+
+    const supabase = createClient()
 
     // Prepare update data
     const updateData: any = { nama, jabatan, instansi, role }
@@ -137,6 +157,8 @@ export async function PUT(request: NextRequest) {
       updateData.password_hash = password
     }
 
+    console.log('Update data:', updateData)
+
     const { data, error } = await (supabase as any)
       .from('peserta')
       .update(updateData)
@@ -144,11 +166,14 @@ export async function PUT(request: NextRequest) {
       .select()
 
     if (error) {
+      console.error('Database update error:', error)
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
+    console.log('Update successful:', data)
     return NextResponse.json({ success: true, data })
   } catch (error) {
+    console.error('PUT error:', error)
     return NextResponse.json({ error: 'Terjadi kesalahan sistem' }, { status: 500 })
   }
 }
@@ -162,7 +187,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'ID peserta diperlukan' }, { status: 400 })
     }
 
-    const supabase = createServerClient()
+    const supabase = createClient()
 
     const { error } = await (supabase as any)
       .from('peserta')

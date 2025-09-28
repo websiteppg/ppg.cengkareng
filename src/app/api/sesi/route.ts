@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createServerClient()
+    const supabase = createClient()
 
     const { data: sessions, error } = await (supabase as any)
       .from('sesi_musyawarah')
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createServerClient()
+    const supabase = createClient()
     const body = await request.json()
     
     const { 
@@ -118,8 +118,7 @@ export async function POST(request: NextRequest) {
         tipe: (tipe || 'offline').substring(0, 20),
         status: 'scheduled',
         maksimal_peserta: parseInt(maksimal_peserta) || 100,
-        batas_absen_mulai: 30,
-        batas_absen_selesai: 15,
+
         created_by: createdBy
       })
       .select()
@@ -138,7 +137,7 @@ export async function POST(request: NextRequest) {
       const sesiPesertaData = peserta_ids.map((peserta_id: string) => ({
         sesi_id: session.id,
         peserta_id,
-        wajib_hadir: true,
+
         created_at: new Date().toISOString()
       }))
 

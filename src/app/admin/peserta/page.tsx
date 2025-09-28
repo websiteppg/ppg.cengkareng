@@ -4,11 +4,12 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Plus, Search, Edit, Trash2, X } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, X, Info } from 'lucide-react'
 import { ToastContainer } from '@/components/ui/toast'
 import { useToast } from '@/hooks/use-toast'
 import Link from 'next/link'
 import RoleGuard from '@/components/admin/role-guard'
+import RoleInfoModal from '@/components/admin/role-info-modal'
 
 interface Participant {
   id: string
@@ -22,64 +23,43 @@ interface Participant {
 
 export default function ParticipantManagement() {
   const [participants, setParticipants] = useState<Participant[]>([])
-  const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [editingParticipant, setEditingParticipant] = useState<Participant | null>(null)
   const [editForm, setEditForm] = useState({ nama: '', jabatan: '', instansi: '', role: '', password: '' })
+  const [showRoleInfo, setShowRoleInfo] = useState(false)
+  const [currentUserRole, setCurrentUserRole] = useState<string>('')
   const { toasts, removeToast, toast } = useToast()
 
   useEffect(() => {
     fetchParticipants()
+    // Get current user role from localStorage
+    const adminUser = localStorage.getItem('admin_user')
+    if (adminUser) {
+      const user = JSON.parse(adminUser)
+      setCurrentUserRole(user.role)
+    }
   }, [])
 
   const fetchParticipants = async () => {
     try {
-      setError(null)
       const response = await fetch('/api/peserta')
       if (response.ok) {
         const data = await response.json()
-        if (Array.isArray(data)) {
-          const safeData = data.map((p: any) => ({
-            id: p.id || '',
-            nama: String(p.nama || ''),
-            email: String(p.email || ''),
-            jabatan: String(p.jabatan || ''),
-            instansi: String(p.instansi || ''),
-            role: String(p.role || 'peserta'),
-            aktif: Boolean(p.aktif)
-          }))
-          setParticipants(safeData)
-        } else {
-          setParticipants([])
-        }
-      } else {
-        setError('Gagal memuat data peserta')
-        setParticipants([])
+        setParticipants(data)
       }
     } catch (error) {
       console.error('Error fetching participants:', error)
-      setError('Terjadi kesalahan saat memuat data')
-      setParticipants([])
     } finally {
       setIsLoading(false)
     }
   }
 
-  const filteredParticipants = participants.filter(p => {
-    try {
-      if (!p || !searchTerm) return true
-      const search = searchTerm.toLowerCase()
-      return (
-        String(p.nama || '').toLowerCase().includes(search) ||
-        String(p.email || '').toLowerCase().includes(search) ||
-        String(p.instansi || '').toLowerCase().includes(search)
-      )
-    } catch (error) {
-      console.error('Filter error:', error)
-      return true
-    }
-  })
+  const filteredParticipants = participants.filter(p =>
+    p.nama?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (p.instansi || '').toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
   const getRoleText = (role: string) => {
     const roles = {
@@ -87,7 +67,16 @@ export default function ParticipantManagement() {
       'admin': 'Admin',
       'admin_kmm': 'Admin KMM',
       'sekretaris_ppg': 'Sekretaris PPG',
-      'peserta': 'Peserta'
+      'bidang_ppg': 'Bidang PPG',
+      'peserta': 'Peserta',
+      'kbm_desa_kalideres': 'Admin Desa Kalideres',
+      'kbm_desa_bandara': 'Admin Desa Bandara',
+      'kbm_desa_kebon_jahe': 'Admin Desa Kebon Jahe',
+      'kbm_desa_cengkareng': 'Admin Desa Cengkareng',
+      'kbm_desa_kapuk_melati': 'Admin Desa Kapuk Melati',
+      'kbm_desa_taman_kota': 'Admin Desa Taman Kota',
+      'kbm_desa_jelambar': 'Admin Desa Jelambar',
+      'kbm_desa_cipondoh': 'Admin Desa Cipondoh'
     }
     return roles[role as keyof typeof roles] || role
   }
@@ -98,7 +87,16 @@ export default function ParticipantManagement() {
       'admin': 'bg-blue-100 text-blue-800',
       'admin_kmm': 'bg-indigo-100 text-indigo-800',
       'sekretaris_ppg': 'bg-purple-100 text-purple-800',
-      'peserta': 'bg-green-100 text-green-800'
+      'bidang_ppg': 'bg-teal-100 text-teal-800',
+      'peserta': 'bg-green-100 text-green-800',
+      'kbm_desa_kalideres': 'bg-orange-100 text-orange-800',
+      'kbm_desa_bandara': 'bg-orange-100 text-orange-800',
+      'kbm_desa_kebon_jahe': 'bg-orange-100 text-orange-800',
+      'kbm_desa_cengkareng': 'bg-orange-100 text-orange-800',
+      'kbm_desa_kapuk_melati': 'bg-orange-100 text-orange-800',
+      'kbm_desa_taman_kota': 'bg-orange-100 text-orange-800',
+      'kbm_desa_jelambar': 'bg-orange-100 text-orange-800',
+      'kbm_desa_cipondoh': 'bg-orange-100 text-orange-800'
     }
     return colors[role as keyof typeof colors] || 'bg-gray-100 text-gray-800'
   }
@@ -176,17 +174,6 @@ export default function ParticipantManagement() {
     )
   }
 
-  if (error) {
-    return (
-      <div className="p-6">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">{error}</p>
-          <Button onClick={fetchParticipants}>Coba Lagi</Button>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <RoleGuard allowedRoles={['admin', 'super_admin', 'sekretaris_ppg']}>
       <div className="p-6">
@@ -195,15 +182,27 @@ export default function ParticipantManagement() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Manajemen Peserta</h1>
           <p className="text-gray-600 mt-2">
-            Kelola Data Peserta Musywarah ({participants.length} peserta)
+            Kelola Data Peserta Musyawarah ({participants.length} peserta)
           </p>
         </div>
-        <Link href="/admin/peserta/tambah">
-          <Button>
-            <Plus className="w-4 h-4 mr-2" />
-            Tambah Peserta
-          </Button>
-        </Link>
+        <div className="flex gap-3">
+          {currentUserRole === 'super_admin' && (
+            <Button 
+              variant="outline" 
+              onClick={() => setShowRoleInfo(true)}
+              className="flex items-center gap-2"
+            >
+              <Info className="w-4 h-4" />
+              Info Role
+            </Button>
+          )}
+          <Link href="/admin/peserta/tambah">
+            <Button>
+              <Plus className="w-4 h-4 mr-2" />
+              Tambah Peserta
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Search */}
@@ -249,9 +248,9 @@ export default function ParticipantManagement() {
                     <td className="py-3 px-4">
                       <div className="font-medium text-gray-900">{participant.nama}</div>
                     </td>
-                    <td className="py-3 px-4 text-gray-600">{participant.email}</td>
-                    <td className="py-3 px-4 text-gray-600">{participant.jabatan}</td>
-                    <td className="py-3 px-4 text-gray-600">{participant.instansi}</td>
+                    <td className="py-3 px-4 text-gray-600">{participant.email || '-'}</td>
+                    <td className="py-3 px-4 text-gray-600">{participant.jabatan || '-'}</td>
+                    <td className="py-3 px-4 text-gray-600">{participant.instansi || '-'}</td>
                     <td className="py-3 px-4">
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(participant.role)}`}>
                         {getRoleText(participant.role)}
@@ -347,9 +346,20 @@ export default function ParticipantManagement() {
                 >
                   <option value="peserta">Peserta</option>
                   <option value="sekretaris_ppg">Sekretaris PPG</option>
+                  <option value="bidang_ppg">Bidang PPG</option>
                   <option value="admin_kmm">Admin KMM</option>
                   <option value="admin">Admin</option>
                   <option value="super_admin">Super Admin</option>
+                  <optgroup label="Admin KBM Desa">
+                    <option value="kbm_desa_kalideres">Admin Desa Kalideres</option>
+                    <option value="kbm_desa_bandara">Admin Desa Bandara</option>
+                    <option value="kbm_desa_kebon_jahe">Admin Desa Kebon Jahe</option>
+                    <option value="kbm_desa_cengkareng">Admin Desa Cengkareng</option>
+                    <option value="kbm_desa_kapuk_melati">Admin Desa Kapuk Melati</option>
+                    <option value="kbm_desa_taman_kota">Admin Desa Taman Kota</option>
+                    <option value="kbm_desa_jelambar">Admin Desa Jelambar</option>
+                    <option value="kbm_desa_cipondoh">Admin Desa Cipondoh</option>
+                  </optgroup>
                 </select>
               </div>
               
@@ -376,6 +386,12 @@ export default function ParticipantManagement() {
         </div>
       )}
         <ToastContainer toasts={toasts} onRemove={removeToast} />
+        
+        {/* Role Info Modal */}
+        <RoleInfoModal 
+          isOpen={showRoleInfo} 
+          onClose={() => setShowRoleInfo(false)} 
+        />
       </div>
     </RoleGuard>
   )

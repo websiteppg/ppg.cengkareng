@@ -1,88 +1,133 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createServerClient()
+    const supabase = createClient()
     const { searchParams } = new URL(request.url)
     const username = searchParams.get('username')
 
     if (!username) {
-      return NextResponse.json(
-        { error: 'Username wajib diisi' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Username required' }, { status: 400 })
     }
 
-    // Find peserta by email (used as username)
-    const { data: peserta, error: pesertaError } = await (supabase as any)
+    // Find peserta by email (username)
+    const { data: peserta, error: pesertaError } = await supabase
       .from('peserta')
-      .select('id, nama, email, jabatan')
+      .select('id, nama, email, jabatan, instansi')
       .eq('email', username)
-      .eq('role', 'peserta')
+      .eq('aktif', true)
       .single()
 
     if (pesertaError || !peserta) {
-      return NextResponse.json(
-        { error: 'Username tidak ditemukan' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Peserta tidak ditemukan' }, { status: 404 })
     }
 
-    // Get sessions that this peserta is invited to
-    const { data: sessions, error: sessionsError } = await (supabase as any)
+    // Get sesi that this peserta is assigned to
+    const { data: sesiPeserta, error: sesiError } = await supabase
       .from('sesi_peserta')
       .select(`
         sesi_id,
-        sesi_musyawarah:sesi_id (
-          id,
-          nama_sesi,
-          tanggal,
-          waktu_mulai,
-          waktu_selesai,
-          lokasi,
-          status
+        sesi:sesi_id(
+          id, nama_sesi, tanggal, waktu_mulai, waktu_selesai, lokasi, tipe
         )
       `)
-      .eq('peserta_id', peserta.id)
+      .eq('peserta_id', (peserta as any).id)
 
-    if (sessionsError) {
-      console.error('Sessions error:', sessionsError)
-      return NextResponse.json(
-        { error: 'Gagal memuat sesi' },
-        { status: 500 }
-      )
+    if (sesiError) {
+      return NextResponse.json({ error: 'Gagal mengambil data sesi' }, { status: 500 })
     }
 
-    // Get attendance status for each session
-    const sessionIds = sessions?.map((s: any) => s.sesi_musyawarah.id) || []
-    const { data: attendanceRecords } = await (supabase as any)
+    // Get existing absensi for this peserta
+    const { data: absensi, error: absensiError } = await supabase
       .from('absensi')
-      .select('sesi_id, status_kehadiran')
-      .eq('peserta_id', peserta.id)
-      .in('sesi_id', sessionIds)
+      .select('sesi_id, status_kehadiran, waktu_absen')
+      .eq('peserta_id', (peserta as any).id)
 
-    // Combine session data with attendance status
-    const sessionsWithStatus = sessions?.map((s: any) => ({
-      id: s.sesi_musyawarah.id,
-      nama_sesi: s.sesi_musyawarah.nama_sesi,
-      tanggal: s.sesi_musyawarah.tanggal,
-      waktu_mulai: s.sesi_musyawarah.waktu_mulai,
-      waktu_selesai: s.sesi_musyawarah.waktu_selesai,
-      lokasi: s.sesi_musyawarah.lokasi,
-      status_absensi: attendanceRecords?.find((a: any) => a.sesi_id === s.sesi_musyawarah.id)?.status_kehadiran || null
-    })).filter((s: any) => s.id) // Filter out null sessions
+    if (absensiError) {
+      return NextResponse.json({ error: 'Gagal mengambil data absensi' }, { status: 500 })
+    }
+
+    // Map absensi by sesi_id for easy lookup
+    const absensiMap = new Map()
+    absensi?.forEach((item: any) => {
+      absensiMap.set(item.sesi_id, item)
+    })
+
+    // Combine sesi with absensi status
+    const sesiWithAbsensi = sesiPeserta?.map((sp: any) => ({
+      ...sp.sesi,
+      absensi: absensiMap.get(sp.sesi_id) || null
+    })) || []
 
     return NextResponse.json({
       peserta,
-      sessions: sessionsWithStatus || []
+      sesi: sesiWithAbsensi
     })
 
   } catch (error) {
-    console.error('API error:', error)
-    return NextResponse.json(
-      { error: 'Terjadi kesalahan sistem' },
-      { status: 500 }
-    )
+    console.error('Error in absensi peserta:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = createClient()
+    const body = await request.json()
+    const { username, sesi_id, status_kehadiran, catatan } = body
+
+    if (!username || !sesi_id || !status_kehadiran) {
+      return NextResponse.json({ error: 'Data tidak lengkap' }, { status: 400 })
+    }
+
+    // Find peserta by email (username)
+    const { data: peserta, error: pesertaError } = await supabase
+      .from('peserta')
+      .select('id')
+      .eq('email', username)
+      .eq('aktif', true)
+      .single()
+
+    if (pesertaError || !peserta) {
+      return NextResponse.json({ error: 'Peserta tidak ditemukan' }, { status: 404 })
+    }
+
+    // Check if already absent
+    const { data: existing } = await supabase
+      .from('absensi')
+      .select('id')
+      .eq('peserta_id', (peserta as any).id)
+      .eq('sesi_id', sesi_id)
+      .single()
+
+    if (existing) {
+      return NextResponse.json({ error: 'Sudah melakukan absensi' }, { status: 400 })
+    }
+
+    // Insert absensi
+    const { data, error } = await (supabase as any)
+      .from('absensi')
+      .insert({
+        peserta_id: (peserta as any).id,
+        sesi_id,
+        status_kehadiran,
+        catatan,
+        waktu_absen: new Date().toISOString(),
+        ip_address: request.ip || '127.0.0.1',
+        user_agent: request.headers.get('user-agent') || 'Unknown'
+      })
+      .select()
+      .single()
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ data, message: 'Absensi berhasil dicatat' })
+
+  } catch (error) {
+    console.error('Error in POST absensi peserta:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

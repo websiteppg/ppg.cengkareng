@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 
 export async function GET(
   request: NextRequest,
@@ -7,38 +7,44 @@ export async function GET(
 ) {
   try {
     const sesiId = params.id
-    const supabase = createServerClient()
+    const supabase = createClient()
 
-    // Get peserta IDs assigned to this sesi
-    const { data: sesiPesertaData, error: sesiError } = await (supabase as any)
+    console.log('Fetching participants for session:', sesiId)
+
+    // Direct query with JOIN to get peserta details
+    const { data: pesertaList, error } = await (supabase as any)
       .from('sesi_peserta')
-      .select('peserta_id')
+      .select(`
+        peserta_id,
+        peserta:peserta_id (
+          id,
+          nama,
+          email,
+          jabatan,
+          instansi
+        )
+      `)
       .eq('sesi_id', sesiId)
 
-    if (sesiError) {
-      console.error('Error fetching sesi_peserta:', sesiError)
+    if (error) {
+      console.error('Error fetching participants:', error)
       return NextResponse.json(
         { error: 'Gagal mengambil data peserta' },
         { status: 500 }
       )
     }
 
-    // Get peserta details
-    let pesertaList = []
-    if (sesiPesertaData && sesiPesertaData.length > 0) {
-      const pesertaIds = sesiPesertaData.map((sp: any) => sp.peserta_id)
-      
-      const { data: pesertaData, error: pesertaError } = await (supabase as any)
-        .from('peserta')
-        .select('id, nama, email, jabatan, instansi')
-        .in('id', pesertaIds)
-      
-      if (!pesertaError) {
-        pesertaList = pesertaData || []
-      }
-    }
+    // Transform data to match expected format
+    const transformedData = pesertaList?.map((item: any) => ({
+      id: item.peserta?.id || item.peserta_id,
+      nama: item.peserta?.nama || 'Unknown',
+      email: item.peserta?.email || '',
+      jabatan: item.peserta?.jabatan || '',
+      instansi: item.peserta?.instansi || ''
+    })) || []
 
-    return NextResponse.json(pesertaList)
+    console.log('Transformed participants:', transformedData.length)
+    return NextResponse.json(transformedData)
 
   } catch (error) {
     console.error('API Error:', error)

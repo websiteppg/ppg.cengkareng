@@ -1,79 +1,63 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    const supabase = createClient()
     const sesiId = params.id
-    const supabase = createServerClient()
+    const body = await request.json()
+    const { criteria } = body
 
-    // Get peserta yang sudah absen tapi belum terdaftar di sesi_peserta
-    const { data: absensiData } = await (supabase as any)
-      .from('absensi')
-      .select('peserta_id')
-      .eq('sesi_id', sesiId)
+    // Get all active peserta based on criteria
+    let query = supabase
+      .from('peserta')
+      .select('id')
+      .eq('aktif', true)
 
-    console.log('Absensi data:', absensiData)
-
-    if (!absensiData || absensiData.length === 0) {
-      return NextResponse.json({ message: 'Tidak ada peserta yang perlu di-assign' })
+    if (criteria?.role) {
+      query = query.eq('role', criteria.role)
     }
 
-    const pesertaAbsenIds = absensiData.map((a: any) => a.peserta_id)
-    console.log('Peserta absen IDs:', pesertaAbsenIds)
+    const { data: peserta, error: pesertaError } = await query
 
-    // Get peserta yang sudah terdaftar di sesi_peserta
-    const { data: sesiPesertaData } = await (supabase as any)
+    if (pesertaError) {
+      return NextResponse.json({ error: pesertaError.message }, { status: 500 })
+    }
+
+    if (!peserta || peserta.length === 0) {
+      return NextResponse.json({ error: 'Tidak ada peserta yang sesuai kriteria' }, { status: 400 })
+    }
+
+    // Delete existing assignments
+    await (supabase as any)
       .from('sesi_peserta')
-      .select('peserta_id')
+      .delete()
       .eq('sesi_id', sesiId)
 
-    console.log('Sesi peserta data:', sesiPesertaData)
-    const pesertaTerdaftarIds = sesiPesertaData?.map((sp: any) => sp.peserta_id) || []
-    console.log('Peserta terdaftar IDs:', pesertaTerdaftarIds)
-
-    // Find peserta yang sudah absen tapi belum terdaftar
-    const pesertaBelumTerdaftar = pesertaAbsenIds.filter(
-      (id: string) => !pesertaTerdaftarIds.includes(id)
-    )
-    console.log('Peserta belum terdaftar:', pesertaBelumTerdaftar)
-
-    if (pesertaBelumTerdaftar.length === 0) {
-      return NextResponse.json({ message: 'Semua peserta sudah terdaftar' })
-    }
-
-    // Insert peserta baru ke sesi_peserta
-    const newSesiPesertaData = pesertaBelumTerdaftar.map((peserta_id: string) => ({
+    // Insert new assignments
+    const assignments = peserta.map((p: any) => ({
       sesi_id: sesiId,
-      peserta_id,
-      wajib_hadir: true,
+      peserta_id: p.id,
       created_at: new Date().toISOString()
     }))
 
-    const { error } = await (supabase as any)
+    const { error: insertError } = await (supabase as any)
       .from('sesi_peserta')
-      .insert(newSesiPesertaData)
+      .insert(assignments)
 
-    if (error) {
-      console.error('Auto-assign error:', error)
-      return NextResponse.json(
-        { error: 'Gagal auto-assign peserta' },
-        { status: 500 }
-      )
+    if (insertError) {
+      return NextResponse.json({ error: insertError.message }, { status: 500 })
     }
 
-    return NextResponse.json({
-      message: `Berhasil auto-assign ${pesertaBelumTerdaftar.length} peserta`,
-      assigned_count: pesertaBelumTerdaftar.length
+    return NextResponse.json({ 
+      message: 'Auto assign berhasil',
+      count: assignments.length 
     })
 
   } catch (error) {
-    console.error('Auto-assign API error:', error)
-    return NextResponse.json(
-      { error: 'Terjadi kesalahan sistem' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

@@ -1,70 +1,67 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createServerClient()
+    const supabase = createClient()
     const sessionId = params.id
 
-    // Get all participants assigned to this session with their attendance status
-    const { data: participants, error } = await supabase
+    // Get session details with participants and attendance
+    const { data: session, error: sessionError } = await supabase
+      .from('sesi_musyawarah')
+      .select('*')
+      .eq('id', sessionId)
+      .single()
+
+    if (sessionError || !session) {
+      return NextResponse.json({ error: 'Sesi tidak ditemukan' }, { status: 404 })
+    }
+
+    // Get participants for this session
+    const { data: participants, error: participantsError } = await supabase
       .from('sesi_peserta')
       .select(`
-        peserta:peserta_id (
-          id,
-          nama,
-          email
+        peserta:peserta_id(
+          id, nama, email, jabatan, instansi
         )
       `)
       .eq('sesi_id', sessionId)
 
-    if (error) {
-      throw error
+    if (participantsError) {
+      return NextResponse.json({ error: participantsError.message }, { status: 500 })
     }
 
-    // Get attendance records for this session
-    const { data: attendanceRecords } = await supabase
+    // Get attendance data
+    const { data: attendance, error: attendanceError } = await supabase
       .from('absensi')
-      .select(`
-        peserta_id,
-        status_kehadiran,
-        waktu_absen,
-        catatan
-      `)
+      .select('peserta_id, status_kehadiran, waktu_absen, catatan')
       .eq('sesi_id', sessionId)
 
-    // Combine participant data with attendance status
-    const participantsWithStatus = (participants || []).map((item: any) => {
-      const peserta = item.peserta
-      if (!peserta) {
-        return null
-      }
-      
-      const attendance = attendanceRecords?.find(
-        (record: any) => record.peserta_id === peserta.id
-      ) as any
+    if (attendanceError) {
+      return NextResponse.json({ error: attendanceError.message }, { status: 500 })
+    }
 
-      return {
-        id: peserta.id,
-        nama: peserta.nama || 'Nama tidak tersedia',
-        email: peserta.email || 'Email tidak tersedia',
-        status_kehadiran: attendance?.status_kehadiran || null,
-        waktu_absen: attendance?.waktu_absen || null,
-        catatan: attendance?.catatan || null
-      }
-    }).filter(Boolean)
+    // Map attendance by peserta_id
+    const attendanceMap = new Map()
+    attendance?.forEach((item: any) => {
+      attendanceMap.set(item.peserta_id, item)
+    })
+
+    // Combine participants with attendance status
+    const participantsWithAttendance = participants?.map((p: any) => ({
+      ...p.peserta,
+      attendance: attendanceMap.get(p.peserta.id) || null
+    })) || []
 
     return NextResponse.json({
-      peserta: participantsWithStatus || []
+      session,
+      participants: participantsWithAttendance
     })
+
   } catch (error) {
-    console.error('Session details API error:', error)
-    return NextResponse.json(
-      { error: 'Terjadi kesalahan sistem' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

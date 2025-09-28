@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createServerClient()
+    const supabase = createClient()
 
     // Check if admin already exists
     const { data: existingAdmin } = await (supabase as any)

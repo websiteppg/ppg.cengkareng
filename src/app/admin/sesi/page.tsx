@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Plus, Calendar, Clock, MapPin, Users, Edit, Trash2 } from 'lucide-react'
+import { Plus, Calendar, Clock, MapPin, Users, Edit, Trash2, ClipboardList } from 'lucide-react'
 import Link from 'next/link'
 import { getUserFromStorage, canEditOwnContent } from '@/lib/auth'
 // import { formatDate, formatTime, getStatusColor, getStatusText } from '@/lib/utils'
@@ -158,6 +158,12 @@ export default function SessionManagement() {
               </div>
 
               <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t">
+                <Link href={`/admin/sesi/${session.id}/absensi`}>
+                  <Button variant="outline" size="sm" className="w-full">
+                    <ClipboardList className="w-4 h-4 mr-1" />
+                    Absensi
+                  </Button>
+                </Link>
                 {currentUser && canEditOwnContent(currentUser.role, session.created_by, currentUser.id) ? (
                   <Link href={`/admin/sesi/${session.id}/edit`}>
                     <Button variant="outline" size="sm" className="w-full">
@@ -171,12 +177,7 @@ export default function SessionManagement() {
                     Edit
                   </Button>
                 )}
-                <Link href={`/admin/sesi/${session.id}/kehadiran`}>
-                  <Button size="sm" className="w-full">
-                    <Users className="w-4 h-4 mr-1" />
-                    Kehadiran
-                  </Button>
-                </Link>
+
                 {currentUser && canEditOwnContent(currentUser.role, session.created_by, currentUser.id) ? (
                   <Button 
                     variant="destructive" 

@@ -1,37 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createServerClient()
-
-    const { data: attendanceRecords, error } = await (supabase as any)
+    const supabase = createClient()
+    
+    const { data: absensi, error } = await supabase
       .from('absensi')
       .select(`
-        id,
-        waktu_absen,
-        status_kehadiran,
-        catatan,
-        ip_address,
-        peserta!inner(nama, email, instansi),
-        sesi_musyawarah!inner(nama_sesi, tanggal, waktu_mulai)
+        *,
+        peserta:peserta_id(nama, email),
+        sesi:sesi_id(nama_sesi, tanggal)
       `)
-      .order('waktu_absen', { ascending: false })
+      .order('created_at', { ascending: false })
 
     if (error) {
-      return NextResponse.json(
-        { error: 'Gagal memuat data absensi' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json(attendanceRecords || [])
-
+    return NextResponse.json({ data: absensi })
   } catch (error) {
-    console.error('Get all attendance error:', error)
-    return NextResponse.json(
-      { error: 'Terjadi kesalahan sistem' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

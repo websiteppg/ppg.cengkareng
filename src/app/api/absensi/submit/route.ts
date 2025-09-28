@@ -1,99 +1,65 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createServerClient()
+    const supabase = createClient()
     const body = await request.json()
-    
-    const { sesi_id, peserta_id, status_kehadiran, catatan } = body
+    const { username, sesi_id, status_kehadiran, catatan } = body
 
-    // Validate required fields
-    if (!sesi_id || !peserta_id || !status_kehadiran) {
-      return NextResponse.json(
-        { error: 'Data tidak lengkap' },
-        { status: 400 }
-      )
+    if (!username || !sesi_id || !status_kehadiran) {
+      return NextResponse.json({ error: 'Data tidak lengkap' }, { status: 400 })
     }
 
-    // Validate status_kehadiran
-    const validStatuses = ['hadir', 'ghoib', 'izin', 'sakit']
-    if (!validStatuses.includes(status_kehadiran)) {
-      return NextResponse.json(
-        { error: 'Status kehadiran tidak valid' },
-        { status: 400 }
-      )
-    }
-
-    // Check if peserta is invited to this session
-    const { data: invitation, error: invitationError } = await (supabase as any)
-      .from('sesi_peserta')
-      .select('id')
-      .eq('sesi_id', sesi_id)
-      .eq('peserta_id', peserta_id)
+    // Find peserta by email (username)
+    const { data: peserta, error: pesertaError } = await supabase
+      .from('peserta')
+      .select('id, nama')
+      .eq('email', username)
+      .eq('aktif', true)
       .single()
 
-    if (invitationError || !invitation) {
-      return NextResponse.json(
-        { error: 'Anda tidak diundang ke sesi ini' },
-        { status: 403 }
-      )
+    if (pesertaError || !peserta) {
+      return NextResponse.json({ error: 'Peserta tidak ditemukan' }, { status: 404 })
     }
 
-    // Check if already attended
-    const { data: existingAttendance } = await (supabase as any)
+    // Check if already submitted
+    const { data: existing } = await supabase
       .from('absensi')
       .select('id')
+      .eq('peserta_id', (peserta as any).id)
       .eq('sesi_id', sesi_id)
-      .eq('peserta_id', peserta_id)
       .single()
 
-    if (existingAttendance) {
-      return NextResponse.json(
-        { error: 'Anda sudah melakukan absensi untuk sesi ini' },
-        { status: 409 }
-      )
+    if (existing) {
+      return NextResponse.json({ error: 'Sudah melakukan absensi untuk sesi ini' }, { status: 400 })
     }
 
-    // Get client IP and user agent for logging
-    const clientIP = request.headers.get('x-forwarded-for') || 
-                    request.headers.get('x-real-ip') || 
-                    'unknown'
-    const userAgent = request.headers.get('user-agent') || 'unknown'
-
-    // Insert attendance record
+    // Submit absensi
     const { data, error } = await (supabase as any)
       .from('absensi')
       .insert({
+        peserta_id: (peserta as any).id,
         sesi_id,
-        peserta_id,
         status_kehadiran,
         catatan: catatan || null,
         waktu_absen: new Date().toISOString(),
-        ip_address: clientIP,
-        user_agent: userAgent
+        ip_address: request.ip || '127.0.0.1',
+        user_agent: request.headers.get('user-agent') || 'Unknown'
       })
       .select()
       .single()
 
     if (error) {
-      console.error('Database error:', error)
-      return NextResponse.json(
-        { error: 'Gagal mencatat absensi' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({
-      message: 'Absensi berhasil dicatat',
-      data
+    return NextResponse.json({ 
+      data, 
+      message: `Absensi berhasil dicatat untuk ${(peserta as any).nama}` 
     })
 
   } catch (error) {
-    console.error('Submit attendance error:', error)
-    return NextResponse.json(
-      { error: 'Terjadi kesalahan sistem' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

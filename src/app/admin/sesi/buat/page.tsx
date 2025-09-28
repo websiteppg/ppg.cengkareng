@@ -199,7 +199,7 @@ export default function CreateSession() {
         </Link>
         <h1 className="text-3xl font-bold text-gray-900">Buat Sesi Baru</h1>
         <p className="text-gray-600 mt-2">
-          Buat sesi musyawarah PPG baru dengan detail lengkap
+          Buat Sesi Musyawarah Baru Dengan Detail Lengkap
         </p>
       </div>
 
@@ -344,7 +344,7 @@ export default function CreateSession() {
             <CardHeader>
               <CardTitle>Pilih Peserta</CardTitle>
               <CardDescription>
-                Tentukan peserta yang wajib hadir di sesi ini
+                Tentukan peserta yang akan mengikuti sesi ini
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -353,7 +353,7 @@ export default function CreateSession() {
                 <div className="flex justify-between items-center mb-3">
                   <label className="block text-sm font-medium text-gray-700">
                     <UserCheck className="w-4 h-4 inline mr-1" />
-                    Pilih Peserta Wajib Hadir * ({selectedParticipants.length} dipilih)
+                    Pilih Peserta Sesi * ({selectedParticipants.length} dipilih)
                   </label>
                   <div className="flex space-x-2">
                     <Button
@@ -459,7 +459,7 @@ export default function CreateSession() {
                 </div>
                 
                 {selectedParticipants.length === 0 && (
-                  <p className="text-red-600 text-sm mt-2">* Pilih minimal 1 peserta yang wajib hadir</p>
+                  <p className="text-red-600 text-sm mt-2">* Pilih minimal 1 peserta untuk sesi ini</p>
                 )}
               </div>
             </CardContent>

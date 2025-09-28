@@ -1,35 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { sesiId: string } }
 ) {
   try {
+    const supabase = createClient()
     const sesiId = params.sesiId
-    const supabase = createServerClient()
 
-    // Check absensi data
-    const { data: absensiData } = await (supabase as any)
-      .from('absensi')
-      .select('peserta_id, peserta(nama, email)')
+    // Debug info for session
+    const { data: session, error: sessionError } = await supabase
+      .from('sesi_musyawarah')
+      .select('*')
+      .eq('id', sesiId)
+      .single()
+
+    const { data: participants, error: participantsError } = await supabase
+      .from('sesi_peserta')
+      .select('peserta_id')
       .eq('sesi_id', sesiId)
 
-    // Check sesi_peserta data
-    const { data: sesiPesertaData } = await (supabase as any)
-      .from('sesi_peserta')
-      .select('peserta_id, peserta(nama, email)')
+    const { data: attendance, error: attendanceError } = await supabase
+      .from('absensi')
+      .select('*')
       .eq('sesi_id', sesiId)
 
     return NextResponse.json({
-      sesi_id: sesiId,
-      absensi_count: absensiData?.length || 0,
-      absensi_data: absensiData,
-      sesi_peserta_count: sesiPesertaData?.length || 0,
-      sesi_peserta_data: sesiPesertaData
+      session: { data: session, error: sessionError },
+      participants: { data: participants, error: participantsError },
+      attendance: { data: attendance, error: attendanceError }
     })
 
   } catch (error) {
-    return NextResponse.json({ error: String(error) }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

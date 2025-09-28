@@ -120,7 +120,7 @@ export default function AbsensiManagement() {
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Manajemen Absensi</h1>
         <p className="text-gray-600 mt-2">
-          Monitor dan Kelola Data Kehadiran Peserta Musyawarah
+          Monitor Dan Kelola Data Kehadiran Peserta Musyawarah
         </p>
       </div>
 

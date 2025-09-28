@@ -1,52 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    const supabase = createClient()
     const sesiId = params.id
-    const supabase = createServerClient()
 
-    // Get attendance data with peserta info in one query
-    const { data: absensiData, error: absensiError } = await (supabase as any)
+    const { data: absensi, error } = await supabase
       .from('absensi')
       .select(`
-        id, 
-        peserta_id, 
-        status_kehadiran, 
-        waktu_absen, 
-        catatan,
-        peserta:peserta_id (
-          id,
-          nama,
-          email,
-          jabatan,
-          instansi
-        )
+        *,
+        peserta:peserta_id(nama, email, jabatan, instansi)
       `)
       .eq('sesi_id', sesiId)
-      .order('waktu_absen', { ascending: true })
+      .order('waktu_absen', { ascending: false })
 
-    console.log('Absensi data with peserta:', absensiData)
-    console.log('Total count:', absensiData?.length)
-
-    if (absensiError) {
-      console.error('Error fetching attendance:', absensiError)
-      return NextResponse.json(
-        { error: 'Gagal mengambil data kehadiran' },
-        { status: 500 }
-      )
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json(absensiData || [])
-
+    return NextResponse.json({ data: absensi })
   } catch (error) {
-    console.error('API Error:', error)
-    return NextResponse.json(
-      { error: 'Terjadi kesalahan sistem' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

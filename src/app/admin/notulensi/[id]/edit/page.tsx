@@ -121,7 +121,7 @@ export default function EditNotulensiPage() {
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Informasi Dasar</CardTitle>
+            <CardTitle>Judul Notulensi</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
@@ -138,22 +138,7 @@ export default function EditNotulensiPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Agenda</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ReactQuill
-              theme="snow"
-              value={formData.agenda}
-              onChange={(value) => setFormData(prev => ({ ...prev, agenda: value }))}
-              modules={quillModules}
-              style={{ height: '200px', marginBottom: '50px' }}
-            />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Pembahasan</CardTitle>
+            <CardTitle>Isi Notulensi</CardTitle>
           </CardHeader>
           <CardContent>
             <ReactQuill
@@ -168,7 +153,7 @@ export default function EditNotulensiPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Keputusan</CardTitle>
+            <CardTitle>Kesimpulan</CardTitle>
           </CardHeader>
           <CardContent>
             <ReactQuill

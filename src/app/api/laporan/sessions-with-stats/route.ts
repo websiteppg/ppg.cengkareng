@@ -1,93 +1,50 @@
-import { NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const supabase = createServerClient()
+    const supabase = createClient()
 
-    // Get all sessions with basic info
-    const { data: sessions, error: sessionsError } = await supabase
+    // Get all sessions with participant count and attendance stats
+    const { data: sessions, error } = await supabase
       .from('sesi_musyawarah')
       .select(`
-        id,
-        nama_sesi,
-        tanggal,
-        waktu_mulai,
-        waktu_selesai,
-        lokasi,
-        tipe,
-        status,
-        maksimal_peserta
+        *,
+        sesi_peserta(count),
+        absensi(status_kehadiran)
       `)
       .order('tanggal', { ascending: false })
 
-    if (sessionsError) {
-      throw sessionsError
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // Get attendance stats for each session
-    const sessionsWithStats = await Promise.all(
-      (sessions || []).map(async (session: any) => {
-        // Get total assigned participants
-        const { count: totalPeserta } = await supabase
-          .from('sesi_peserta')
-          .select('*', { count: 'exact' })
-          .eq('sesi_id', session.id)
+    // Calculate stats for each session
+    const sessionsWithStats = sessions?.map((session: any) => {
+      const totalPeserta = session.sesi_peserta?.[0]?.count || 0
+      const absensiData = session.absensi || []
+      
+      const hadir = absensiData.filter((a: any) => a.status_kehadiran === 'hadir').length
+      const terlambat = absensiData.filter((a: any) => a.status_kehadiran === 'terlambat').length
+      const izin = absensiData.filter((a: any) => a.status_kehadiran === 'izin').length
+      const sakit = absensiData.filter((a: any) => a.status_kehadiran === 'sakit').length
+      const ghoib = totalPeserta - (hadir + terlambat + izin + sakit)
 
-        // Get attendance breakdown
-        const { data: attendanceData } = await supabase
-          .from('absensi')
-          .select('status_kehadiran')
-          .eq('sesi_id', session.id)
-
-        // Count by status
-        const stats = {
-          total_peserta: totalPeserta || 0,
-          hadir: 0,
-          terlambat: 0,
-          izin: 0,
-          sakit: 0,
-          tidak_hadir: 0
+      return {
+        ...session,
+        stats: {
+          total_peserta: totalPeserta,
+          hadir,
+          terlambat,
+          izin,
+          sakit,
+          ghoib
         }
+      }
+    }) || []
 
-        if (attendanceData) {
-          attendanceData.forEach((record: any) => {
-            switch (record.status_kehadiran) {
-              case 'hadir':
-                stats.hadir++
-                break
-              case 'terlambat':
-                stats.terlambat++
-                break
-              case 'izin':
-                stats.izin++
-                break
-              case 'sakit':
-                stats.sakit++
-                break
-              default:
-                stats.tidak_hadir++
-            }
-          })
-        }
-
-        // Calculate tidak_hadir (assigned but no attendance record)
-        const totalAttended = stats.hadir + stats.terlambat + stats.izin + stats.sakit
-        stats.tidak_hadir = Math.max(0, stats.total_peserta - totalAttended)
-
-        return {
-          ...session,
-          stats
-        }
-      })
-    )
-
-    return NextResponse.json(sessionsWithStats)
+    return NextResponse.json({ data: sessionsWithStats })
   } catch (error) {
-    console.error('Sessions with stats API error:', error)
-    return NextResponse.json(
-      { error: 'Terjadi kesalahan sistem' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

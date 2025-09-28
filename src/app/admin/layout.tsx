@@ -6,6 +6,8 @@ import Head from 'next/head'
 import AdminNavigation from '@/components/admin/admin-navigation'
 import { ToastContainer } from '@/components/ui/toast'
 import { useToast } from '@/hooks/use-toast'
+import { sessionManager } from '@/lib/session-manager'
+import { getUserFromStorage, isSessionValid } from '@/lib/auth'
 
 export default function AdminLayout({
   children,
@@ -18,29 +20,33 @@ export default function AdminLayout({
   const { toasts, removeToast } = useToast()
   
   useEffect(() => {
-    // Prevent browser caching of admin pages
-    if (typeof window !== 'undefined') {
-      window.history.replaceState(null, '', window.location.href)
-      window.addEventListener('popstate', () => {
-        window.location.href = '/'
-      })
+    // Initialize session manager
+    sessionManager.init()
+    
+    // Check user authentication with session validation
+    const checkAuth = () => {
+      const userData = getUserFromStorage()
+      const sessionValid = isSessionValid()
+      
+      if (userData && sessionValid) {
+        setUser(userData)
+        // Refresh session timestamp on page load
+        sessionManager.refreshSession()
+      } else if (pathname !== '/admin/login') {
+        // Clear invalid session and redirect
+        localStorage.removeItem('admin_user')
+        localStorage.removeItem('admin_session_timestamp')
+        window.location.href = '/admin/login'
+        return
+      }
+      setLoading(false)
     }
     
-    // Check localStorage for user data
-    const userData = localStorage.getItem('admin_user')
-    if (userData) {
-      setUser(JSON.parse(userData))
-    } else if (pathname !== '/admin/login') {
-      // Redirect to home if no user data and not on login page
-      window.location.href = '/'
-      return
-    }
-    setLoading(false)
+    // Add small delay to handle browser navigation
+    const timer = setTimeout(checkAuth, 100)
     
     return () => {
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('popstate', () => {})
-      }
+      clearTimeout(timer)
     }
   }, [pathname])
   

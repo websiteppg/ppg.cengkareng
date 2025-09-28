@@ -10,6 +10,10 @@ import { ToastContainer } from '@/components/ui/toast'
 import { useToast } from '@/hooks/use-toast'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import dynamic from 'next/dynamic'
+
+const ReactQuill = dynamic(() => import('react-quill'), { ssr: false })
+import 'react-quill/dist/quill.snow.css'
 
 export default function CreateNotulensiForm() {
   const router = useRouter()
@@ -23,6 +27,17 @@ export default function CreateNotulensiForm() {
     kesimpulan: '',
     tindak_lanjut: ''
   })
+
+  const quillModules = {
+    toolbar: [
+      [{ 'header': [1, 2, 3, false] }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+      [{ 'indent': '-1'}, { 'indent': '+1' }],
+      ['link'],
+      ['clean']
+    ]
+  }
 
   useEffect(() => {
     fetchSessions()
@@ -98,7 +113,7 @@ export default function CreateNotulensiForm() {
     }
   }
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({
       ...prev,
@@ -119,7 +134,7 @@ export default function CreateNotulensiForm() {
         </p>
       </div>
 
-      <div className="max-w-4xl">
+      <div className="max-w-6xl mx-auto">
         <Card>
           <CardHeader>
             <CardTitle>Informasi Notulensi</CardTitle>
@@ -128,91 +143,113 @@ export default function CreateNotulensiForm() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Calendar className="w-4 h-4 inline mr-1" />
-                  Pilih Sesi Musyawarah *
-                </label>
-                <select
-                  name="sesi_id"
-                  value={formData.sesi_id}
-                  onChange={handleChange}
-                  className="w-full p-3 border border-gray-300 rounded-md"
-                  required
+            <form onSubmit={handleSubmit} className="space-y-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    <Calendar className="w-4 h-4 inline mr-1" />
+                    Pilih Sesi Musyawarah *
+                  </label>
+                  <select
+                    name="sesi_id"
+                    value={formData.sesi_id}
+                    onChange={handleInputChange}
+                    className="w-full p-4 border border-gray-300 rounded-lg text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  >
+                    <option value="">Pilih sesi musyawarah...</option>
+                    {sessions.map((sesi: any) => (
+                      <option key={sesi.id} value={sesi.id}>
+                        {sesi.nama_sesi} - {new Date(sesi.tanggal).toLocaleDateString('id-ID')}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Judul Notulensi *
+                  </label>
+                  <Input
+                    name="judul"
+                    value={formData.judul}
+                    onChange={handleInputChange}
+                    placeholder="Contoh: Notulensi Musyawarah PPG Daerah"
+                    className="p-4 text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-8">
+                <div>
+                  <label className="block text-lg font-semibold text-gray-800 mb-4">
+                    📝 Isi Notulensi *
+                  </label>
+                  <div className="border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                    <ReactQuill
+                      theme="snow"
+                      value={formData.isi_notulensi}
+                      onChange={(value) => setFormData(prev => ({ ...prev, isi_notulensi: value }))}
+                      modules={quillModules}
+                      placeholder="Tulis isi notulensi musyawarah dengan detail..."
+                      style={{ height: '300px', marginBottom: '50px' }}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  <div>
+                    <label className="block text-lg font-semibold text-gray-800 mb-4">
+                      💡 Kesimpulan
+                    </label>
+                    <div className="border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                      <ReactQuill
+                        theme="snow"
+                        value={formData.kesimpulan}
+                        onChange={(value) => setFormData(prev => ({ ...prev, kesimpulan: value }))}
+                        modules={quillModules}
+                        placeholder="Kesimpulan dari musyawarah..."
+                        style={{ height: '200px', marginBottom: '50px' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-lg font-semibold text-gray-800 mb-4">
+                      🎯 Tindak Lanjut
+                    </label>
+                    <div className="border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                      <ReactQuill
+                        theme="snow"
+                        value={formData.tindak_lanjut}
+                        onChange={(value) => setFormData(prev => ({ ...prev, tindak_lanjut: value }))}
+                        modules={quillModules}
+                        placeholder="Tindak lanjut yang perlu dilakukan..."
+                        style={{ height: '200px', marginBottom: '50px' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-center space-x-6 pt-8 border-t border-gray-200">
+                <Button 
+                  type="submit" 
+                  disabled={isLoading} 
+                  className="px-8 py-3 text-lg font-semibold bg-blue-600 hover:bg-blue-700 transition-colors"
+                  size="lg"
                 >
-                  <option value="">Pilih sesi musyawarah...</option>
-                  {sessions.map((sesi: any) => (
-                    <option key={sesi.id} value={sesi.id}>
-                      {sesi.nama_sesi} - {new Date(sesi.tanggal).toLocaleDateString('id-ID')}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Judul Notulensi *
-                </label>
-                <Input
-                  name="judul"
-                  value={formData.judul}
-                  onChange={handleChange}
-                  placeholder="Contoh: Notulensi Musyawarah PPG Daerah"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Isi Notulensi *
-                </label>
-                <textarea
-                  name="isi_notulensi"
-                  value={formData.isi_notulensi}
-                  onChange={handleChange}
-                  placeholder="Tulis isi notulensi musyawarah..."
-                  className="w-full p-3 border border-gray-300 rounded-md resize-none"
-                  rows={10}
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Kesimpulan
-                </label>
-                <textarea
-                  name="kesimpulan"
-                  value={formData.kesimpulan}
-                  onChange={handleChange}
-                  placeholder="Kesimpulan dari musyawarah..."
-                  className="w-full p-3 border border-gray-300 rounded-md resize-none"
-                  rows={4}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tindak Lanjut
-                </label>
-                <textarea
-                  name="tindak_lanjut"
-                  value={formData.tindak_lanjut}
-                  onChange={handleChange}
-                  placeholder="Tindak lanjut yang perlu dilakukan..."
-                  className="w-full p-3 border border-gray-300 rounded-md resize-none"
-                  rows={4}
-                />
-              </div>
-
-              <div className="flex space-x-4 pt-4">
-                <Button type="submit" disabled={isLoading} className="flex-1">
-                  <FileText className="w-4 h-4 mr-2" />
-                  {isLoading ? 'Membuat...' : 'Buat Notulensi'}
+                  <FileText className="w-5 h-5 mr-2" />
+                  {isLoading ? 'Membuat Notulensi...' : 'Buat Notulensi'}
                 </Button>
-                <Link href="/admin/notulensi" className="flex-1">
-                  <Button type="button" variant="outline" className="w-full">
+                <Link href="/admin/notulensi">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    className="px-8 py-3 text-lg font-semibold border-gray-300 hover:bg-gray-50 transition-colors"
+                    size="lg"
+                  >
                     Batal
                   </Button>
                 </Link>

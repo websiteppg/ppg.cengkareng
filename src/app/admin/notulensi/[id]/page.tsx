@@ -236,14 +236,7 @@ export default function ViewNotulensiPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Pembahasan</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div dangerouslySetInnerHTML={{ __html: notulensi.pembahasan || 'Tidak ada pembahasan' }} />
-          </CardContent>
-        </Card>
+
 
         <Card>
           <CardHeader>

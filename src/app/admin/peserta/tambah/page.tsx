@@ -66,7 +66,7 @@ export default function TambahPeserta() {
         </Link>
         <h1 className="text-3xl font-bold text-gray-900">Tambah Peserta Baru</h1>
         <p className="text-gray-600 mt-2">
-          Tambahkan peserta baru ke sistem musyawarah PPG
+          Tambahkan Peserta Baru Ke Manajemen PPG
         </p>
       </div>
 
@@ -164,9 +164,20 @@ export default function TambahPeserta() {
                   >
                     <option value="peserta">Peserta</option>
                     <option value="sekretaris_ppg">Sekretaris PPG</option>
+                    <option value="bidang_ppg">Bidang PPG</option>
                     <option value="admin_kmm">Admin KMM</option>
                     <option value="admin">Admin</option>
                     <option value="super_admin">Super Admin</option>
+                    <optgroup label="Admin KBM Desa">
+                      <option value="kbm_desa_kalideres">Admin Desa Kalideres</option>
+                      <option value="kbm_desa_bandara">Admin Desa Bandara</option>
+                      <option value="kbm_desa_kebon_jahe">Admin Desa Kebon Jahe</option>
+                      <option value="kbm_desa_cengkareng">Admin Desa Cengkareng</option>
+                      <option value="kbm_desa_kapuk_melati">Admin Desa Kapuk Melati</option>
+                      <option value="kbm_desa_taman_kota">Admin Desa Taman Kota</option>
+                      <option value="kbm_desa_jelambar">Admin Desa Jelambar</option>
+                      <option value="kbm_desa_cipondoh">Admin Desa Cipondoh</option>
+                    </optgroup>
                   </select>
                 </div>
               </div>
