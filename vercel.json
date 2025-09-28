@@ -1,36 +1,12 @@
 {
-  "framework": "nextjs",
-  "buildCommand": "npm run build",
-  "installCommand": "npm install",
-  "regions": ["sin1"],
-  "functions": {
-    "app/api/**/*.ts": {
-      "maxDuration": 30
-    }
-  },
   "rewrites": [
     {
-      "source": "/admin/(.*)",
-      "destination": "/admin/$1"
-    }
-  ],
-  "headers": [
+      "source": "/admin/program-kerja",
+      "destination": "/admin/program-kerja-admin"
+    },
     {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "X-Frame-Options",
-          "value": "DENY"
-        },
-        {
-          "key": "X-XSS-Protection",
-          "value": "1; mode=block"
-        }
-      ]
+      "source": "/admin/program-kerja/(.*)",
+      "destination": "/admin/program-kerja-admin/$1"
     }
   ]
 }
