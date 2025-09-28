@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-// createClient already imported
+export const dynamic = 'force-dynamic'
 
 const DESA_LIST = [
   { id: 'kalideres', nama: 'Kalideres', kelompok_count: 5 },
