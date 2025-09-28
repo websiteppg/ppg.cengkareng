@@ -167,40 +167,6 @@ export default function AdminNavigation({ user }: AdminNavigationProps) {
             {getFilteredNavigation(user.role).map((item) => {
               const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
               
-              if (item.submenu) {
-                return (
-                  <div key={item.name} className="space-y-1">
-                    <div className={cn(
-                      "flex items-center px-3 py-2 text-sm font-medium rounded-md",
-                      isActive ? "bg-blue-50 text-blue-700" : "text-gray-600"
-                    )}>
-                      <item.icon className="w-5 h-5 mr-3" />
-                      {item.name}
-                    </div>
-                    <div className="ml-6 space-y-1">
-                      {item.submenu.map((subItem) => {
-                        const subIsActive = pathname === subItem.href
-                        return (
-                          <Link
-                            key={subItem.name}
-                            href={subItem.href}
-                            className={cn(
-                              "block px-3 py-2 text-sm rounded-md transition-colors",
-                              subIsActive
-                                ? "bg-blue-100 text-blue-700 font-medium"
-                                : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
-                            )}
-                            onClick={() => setSidebarOpen(false)}
-                          >
-                            {subItem.name}
-                          </Link>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )
-              }
-              
               return (
                 <Link
                   key={item.name}
