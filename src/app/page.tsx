@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Users, FileText, Calendar, BarChart3, CheckCircle, MapPin, Briefcase, FolderOpen, Shield, Zap } from 'lucide-react'
+import { Users, FileText, Calendar, BarChart3, CheckCircle, MapPin, FolderOpen, Shield, Zap } from 'lucide-react'
 
 export default function HomePage() {
   return (
@@ -37,7 +37,7 @@ export default function HomePage() {
             Selamat Datang di Website PPG Jakarta Barat Cengkareng
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Platform terintegrasi untuk mengelola musyawarah, notulensi digital, laporan KBM desa, program kerja, dan manajemen file MediaFire untuk PPG Daerah Jakarta Barat Cengkareng.
+            Platform terintegrasi untuk mengelola musyawarah, notulensi digital, laporan KBM desa, dan manajemen file MediaFire untuk PPG Daerah Jakarta Barat Cengkareng.
           </p>
         </div>
 
@@ -99,19 +99,7 @@ export default function HomePage() {
             </CardContent>
           </Card>
 
-          <Card className="text-center hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <Briefcase className="w-6 h-6 text-indigo-600" />
-              </div>
-              <CardTitle className="text-lg">Program Kerja</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CardDescription>
-                Multi-tahun & bidang, rincian biaya fleksibel, auto calculate, dan export PDF.
-              </CardDescription>
-            </CardContent>
-          </Card>
+
 
           <Card className="text-center hover:shadow-lg transition-shadow">
             <CardHeader>
@@ -135,7 +123,7 @@ export default function HomePage() {
               <Shield className="w-8 h-8 text-green-600" />
             </div>
             <h3 className="text-2xl font-bold text-gray-900 mb-2">Role-Based Access Control</h3>
-            <p className="text-gray-600">Sistem akses berlevel dengan 12+ role untuk keamanan dan efisiensi</p>
+            <p className="text-gray-600">Sistem akses berlevel dengan 10+ role untuk keamanan dan efisiensi</p>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div className="text-center p-3 bg-blue-50 rounded-lg">
@@ -146,10 +134,7 @@ export default function HomePage() {
               <div className="font-semibold text-green-900">Admin KMM</div>
               <div className="text-green-700">Manajemen sesi</div>
             </div>
-            <div className="text-center p-3 bg-purple-50 rounded-lg">
-              <div className="font-semibold text-purple-900">Bidang PPG</div>
-              <div className="text-purple-700">Program kerja</div>
-            </div>
+
             <div className="text-center p-3 bg-yellow-50 rounded-lg">
               <div className="font-semibold text-yellow-900">KBM Desa</div>
               <div className="text-yellow-700">8 desa admin</div>
@@ -191,7 +176,7 @@ export default function HomePage() {
             <div className="text-gray-600">Peserta Aktif</div>
           </div>
           <div className="bg-white rounded-lg p-6 shadow-sm">
-            <div className="text-3xl font-bold text-green-600 mb-2">12+</div>
+            <div className="text-3xl font-bold text-green-600 mb-2">10+</div>
             <div className="text-gray-600">Role Access</div>
           </div>
           <div className="bg-white rounded-lg p-6 shadow-sm">
@@ -210,7 +195,7 @@ export default function HomePage() {
         <div className="container mx-auto px-4 py-8">
           <div className="text-center text-gray-600">
             <p>&copy; 2025 PPG Jakarta Barat Cengkareng. Platform Terintegrasi Penggerak Pembina Generus.</p>
-            <p className="text-sm text-gray-500 mt-2">Sistem Musyawarah • Notulensi Digital • KBM Desa • Program Kerja • MediaFire Manager</p>
+            <p className="text-sm text-gray-500 mt-2">Sistem Musyawarah • Notulensi Digital • KBM Desa • MediaFire Manager</p>
           </div>
         </div>
       </footer>

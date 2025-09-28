@@ -1,5 +1,5 @@
 import './globals.css'
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import { Toaster } from 'sonner'
 
@@ -10,8 +10,11 @@ export const metadata: Metadata = {
   description: 'Website Manajemen PPG Jakarta Barat Cengkareng',
   keywords: 'PPG, musyawarah, notulensi, pendidikan',
   authors: [{ name: 'PPG Indonesia' }],
-  themeColor: '#3b82f6',
   manifest: '/manifest.json',
+}
+
+export const viewport: Viewport = {
+  themeColor: '#3b82f6',
 }
 
 export default function RootLayout({
